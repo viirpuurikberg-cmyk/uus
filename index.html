@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Website Builder</title>
+  <title>Veebiehitaja</title>
   <style>
     :root {
       --bg: #f6f6f7;
@@ -80,6 +80,7 @@
 
     .topbar-center {
       min-width: 0;
+      overflow: hidden;
     }
 
     .topbar-right {
@@ -154,20 +155,31 @@
       align-items: center;
       gap: 8px;
       min-width: 0;
+      flex: 1 1 auto;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding-bottom: 2px;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .stage-nav::-webkit-scrollbar {
+      display: none;
     }
 
     .stage-nav button {
       min-width: 0;
+      flex: 0 0 auto;
       height: 36px;
       border-radius: 10px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
-      padding: 0 12px;
+      padding: 0 10px;
       color: var(--muted);
       border: 1px solid transparent;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 700;
       white-space: nowrap;
     }
@@ -1886,26 +1898,26 @@
         <div class="brand">
           <div class="brand-mark">WB</div>
           <div class="brand-copy">
-            <strong>Website Builder</strong>
-            <span id="saveIndicator">Autosave aktiivne</span>
+            <strong>Veebiehitaja</strong>
+            <span id="saveIndicator">Automaatsalvestus aktiivne</span>
           </div>
         </div>
         <div class="project-chip">
           <strong id="projectChipName">Starter</strong>
-          <span id="projectChipMeta">Teenuseäri · Draft</span>
+          <span id="projectChipMeta">Teenuseäri · Mustand</span>
         </div>
       </div>
       <div class="topbar-center">
-        <div class="stage-nav" id="stageNav" aria-label="Builder views"></div>
-        <div class="device-switch" aria-label="Device switch">
+        <div class="stage-nav" id="stageNav" aria-label="Ehitusvaated"></div>
+        <div class="device-switch" aria-label="Seadme vaade">
           <button class="active" data-device="desktop">⌘</button>
           <button data-device="tablet">▭</button>
           <button data-device="mobile">▯</button>
         </div>
       </div>
       <div class="topbar-right">
-        <button id="previewModeBtn" class="btn-ghost">Preview</button>
-        <button id="trailerBtn" class="btn">Trailer</button>
+        <button id="previewModeBtn" class="btn-ghost">Eelvaade</button>
+        <button id="trailerBtn" class="btn">Treiler</button>
         <button id="exportBtn" class="btn">Ekspordi HTML</button>
         <button id="saveBtn" class="btn-primary">Salvesta</button>
       </div>
@@ -1914,7 +1926,7 @@
     <div class="workspace">
       <aside class="panel">
         <div class="panel-head">
-          <h1 id="panelTitle">Setup</h1>
+          <h1 id="panelTitle">Alustus</h1>
           <p id="panelIntro">Koonda allikad ja ehita esimene müüdav starter-leht.</p>
         </div>
         <div class="panel-body" id="panelBody"></div>
@@ -1928,7 +1940,7 @@
           </div>
           <div class="inline">
             <span class="pill" id="blueprintPill">Blueprint</span>
-            <span class="pill" id="pagePill">Page</span>
+            <span class="pill" id="pagePill">Leht</span>
           </div>
         </div>
         <div class="preview-frame device-desktop" id="previewFrame">
@@ -1967,11 +1979,11 @@
     const appRoot = document.querySelector(".app");
     const STORAGE_KEY = "website_builder_v7";
     const STAGES = [
-      { id: "generate", label: "Setup", icon: "✦" },
-      { id: "structure", label: "Pages", icon: "▣" },
-      { id: "content", label: "Content", icon: "▦" },
-      { id: "design", label: "Theme", icon: "◒" },
-      { id: "publish", label: "Publish", icon: "☉" }
+      { id: "generate", label: "Alustus", icon: "✦" },
+      { id: "structure", label: "Lehed", icon: "▣" },
+      { id: "content", label: "Sisu", icon: "▦" },
+      { id: "design", label: "Välimus", icon: "◒" },
+      { id: "publish", label: "Avalda", icon: "☉" }
     ];
 
     const BLUEPRINTS = {
@@ -1986,12 +1998,12 @@
           { id: "contact", title: "Kontakt", slug: "kontakt" }
         ],
         defaultSections: [
-          { type: "hero", label: "Hero", variant: "split" },
+          { type: "hero", label: "Avaosa", variant: "split" },
           { type: "cards", label: "Teenused", variant: "cards" },
           { type: "trust", label: "Miks valida", variant: "proof" },
           { type: "cta", label: "Konsultatsioon", variant: "contact" }
         ],
-        templateHint: ["Hero", "Teenused", "Usaldus", "Konsultatsioon"],
+        templateHint: ["Avaosa", "Teenused", "Usaldus", "Konsultatsioon"],
         theme: { bg: "#fffdf8", text: "#152033", accent: "#0f7c67", surface: "#ffffff" }
       },
       ehitus: {
@@ -2006,13 +2018,13 @@
           { id: "contact", title: "Kontakt", slug: "kontakt" }
         ],
         defaultSections: [
-          { type: "hero", label: "Hero", variant: "split" },
+          { type: "hero", label: "Avaosa", variant: "split" },
           { type: "cards", label: "Teenused", variant: "cards" },
           { type: "gallery", label: "Tehtud tööd", variant: "grid" },
           { type: "trust", label: "Usaldus", variant: "proof" },
           { type: "cta", label: "Päring", variant: "contact" }
         ],
-        templateHint: ["Hero", "Teenused", "Projektid", "Usaldus", "Päring"],
+        templateHint: ["Avaosa", "Teenused", "Projektid", "Usaldus", "Päring"],
         theme: { bg: "#fcfbf8", text: "#1c2430", accent: "#b86f28", surface: "#ffffff" }
       },
       restoran: {
@@ -2024,21 +2036,21 @@
           { id: "menu", title: "Menüü", slug: "menuu" },
           { id: "booking", title: "Broneeri", slug: "broneeri" },
           { id: "location", title: "Asukoht", slug: "asukoht" },
-          { id: "catering", title: "Catering", slug: "catering" }
+          { id: "catering", title: "Toitlustus", slug: "toitlustus" }
         ],
         defaultSections: [
-          { type: "hero", label: "Hero", variant: "split" },
+          { type: "hero", label: "Avaosa", variant: "split" },
           { type: "cards", label: "Signatuurroad", variant: "cards" },
           { type: "gallery", label: "Atmosfäär", variant: "grid" },
           { type: "trust", label: "Miks külastada", variant: "proof" },
           { type: "cta", label: "Broneerimine", variant: "contact" }
         ],
-        templateHint: ["Hero", "Road", "Galerii", "Broneerimine"],
+        templateHint: ["Avaosa", "Teekond", "Galerii", "Broneerimine"],
         theme: { bg: "#fffaf2", text: "#161b27", accent: "#c65d2e", surface: "#ffffff" }
       },
       ilu: {
         id: "ilu",
-        label: "Ilu / wellness",
+        label: "Ilu / heaolu",
         summary: "Teenused, paketid, tulemused ja lihtne broneerimine.",
         pages: [
           { id: "home", title: "Avaleht", slug: "" },
@@ -2048,13 +2060,13 @@
           { id: "booking", title: "Broneeri", slug: "broneeri" }
         ],
         defaultSections: [
-          { type: "hero", label: "Hero", variant: "split" },
+          { type: "hero", label: "Avaosa", variant: "split" },
           { type: "cards", label: "Teenused", variant: "cards" },
           { type: "gallery", label: "Tulemused", variant: "grid" },
           { type: "trust", label: "Miks valida", variant: "proof" },
           { type: "cta", label: "Broneeri aeg", variant: "contact" }
         ],
-        templateHint: ["Hero", "Teenused", "Tulemused", "Broneerimine"],
+        templateHint: ["Avaosa", "Teenused", "Tulemused", "Broneerimine"],
         theme: { bg: "#fff8fc", text: "#1e2030", accent: "#d66f99", surface: "#ffffff" }
       },
       kaubandus: {
@@ -2069,13 +2081,13 @@
           { id: "contact", title: "Kontakt", slug: "kontakt" }
         ],
         defaultSections: [
-          { type: "hero", label: "Hero", variant: "split" },
+          { type: "hero", label: "Avaosa", variant: "split" },
           { type: "cards", label: "Tooted", variant: "cards" },
           { type: "gallery", label: "Kataloog", variant: "grid" },
           { type: "trust", label: "Miks osta", variant: "proof" },
           { type: "cta", label: "Päring", variant: "contact" }
         ],
-        templateHint: ["Hero", "Tooted", "Galerii", "Päring"],
+        templateHint: ["Avaosa", "Tooted", "Galerii", "Päring"],
         theme: { bg: "#f8fbff", text: "#172033", accent: "#005bd3", surface: "#ffffff" }
       },
       beauty: {
@@ -2092,19 +2104,19 @@
           { id: "booking", title: "Broneeri", slug: "broneeri" }
         ],
         defaultSections: [
-          { type: "hero", label: "Hero", variant: "split" },
+          { type: "hero", label: "Avaosa", variant: "split" },
           { type: "cards", label: "Tooted ja teenused", variant: "cards" },
           { type: "gallery", label: "Rutiin", variant: "grid" },
           { type: "trust", label: "Usaldus", variant: "proof" },
           { type: "cta", label: "Broneering", variant: "contact" }
         ],
-        templateHint: ["Hero", "Tooted", "Teenused", "Hinnad", "Broneering"],
+        templateHint: ["Avaosa", "Tooted", "Teenused", "Hinnad", "Broneering"],
         theme: { bg: "#fff8fb", text: "#352c3a", accent: "#f3a6c8", surface: "#fff0f6" }
       },
       fitness: {
         id: "fitness",
-        label: "Treening / fitness",
-        summary: "Treeningud, juhtimine, visuaalid ja booking-ready flow.",
+        label: "Treening / stuudio",
+        summary: "Treeningud, juhtimine, visuaalid ja valmis broneerimisvoog.",
         pages: [
           { id: "home", title: "Avaleht", slug: "" },
           { id: "services", title: "Teenused", slug: "teenused" },
@@ -2114,13 +2126,13 @@
           { id: "booking", title: "Broneeri", slug: "broneeri" }
         ],
         defaultSections: [
-          { type: "hero", label: "Hero", variant: "split" },
+          { type: "hero", label: "Avaosa", variant: "split" },
           { type: "cards", label: "Teenused", variant: "cards" },
           { type: "gallery", label: "Visuaalid", variant: "grid" },
           { type: "trust", label: "Miks valida", variant: "proof" },
           { type: "cta", label: "Konsultatsioon", variant: "contact" }
         ],
-        templateHint: ["Hero", "Teenused", "Visuaalid", "Usaldus", "Kontakt"],
+        templateHint: ["Avaosa", "Teenused", "Visuaalid", "Usaldus", "Kontakt"],
         theme: { bg: "#08111d", text: "#f4f7fb", accent: "#2f6dff", surface: "#101a28" }
       }
     };
@@ -2202,7 +2214,7 @@
         id: uniqueId(slugify(name)),
         name,
         domain: `${slugify(name)}.ee`,
-        status: "Draft",
+        status: "Mustand",
         blueprintId,
         designTemplateId: "starter",
         source: {
@@ -2257,7 +2269,7 @@
         })),
         content: {
           hero: {
-            eyebrow: `${blueprint.label} starter`,
+            eyebrow: `${blueprint.label} algversioon`,
             title,
             description: `Tutvusta lehel "${title}" kõige olulisemat infot selgelt ja lühidalt.`,
             cta: "Võta ühendust",
@@ -2280,7 +2292,7 @@
           ],
           cta: {
             title: "Valmis järgmise sammuga edasi liikuma?",
-            text: "Koonda kontakt, CTA ja põhjus, miks inimene peaks nüüd ühendust võtma.",
+            text: "Koonda kontakt, nupp ja põhjus, miks inimene peaks nüüd ühendust võtma.",
             contact: "telefon • e-post • aadress",
             button: "Võta ühendust"
           }
@@ -2441,7 +2453,7 @@
           navigation: true,
           content: {
             hero: {
-              eyebrow: "Treening / fitness / stuudio",
+              eyebrow: "Treening / spordistuudio",
               title: "Treeni targemalt. Juhi klubi paremini.",
               description: "Labarb OÜ ühendab personaaltreeningu, spordijuhtimise ja tarkvara üheks kaasaegseks teenuseks.",
               cta: "Broneeri aeg",
@@ -2459,7 +2471,7 @@
               "Sobib eraisikule ja ettevõttele"
             ],
             gallery: [
-              { title: "Treeningud", text: "Päris visuaalid, mitte generic placeholder.", image: image.galleryOne },
+              { title: "Treeningud", text: "Päris visuaalid, mitte suvaline kohatäide.", image: image.galleryOne },
               { title: "Koostöö", text: "Juhtimine, meeskond ja konsultatsioon samas loos.", image: image.galleryTwo }
             ],
             cta: {
@@ -2521,7 +2533,7 @@
             cards: [
               { title: "Klubi juhtimine", text: "Töövood, ülevaade ja kindlam igapäevatöö.", image: image.management },
               { title: "Tarkvara demo", text: "Visuaalne koht päris tootevaadetele ja onboardingule.", image: image.software },
-              { title: "Premium kuvand", text: "Kontakt ja booking jäävad lihtsaks, tunne läheb tugevamaks.", image: image.studio }
+              { title: "Premium kuvand", text: "Kontakt ja broneerimine jäävad lihtsaks, tunne läheb tugevamaks.", image: image.studio }
             ],
             trust: [
               "Moodne teenus + süsteem",
@@ -2534,7 +2546,7 @@
             ],
             cta: {
               title: "Räägime läbi, mis süsteem sind kõige rohkem aitaks",
-              text: "Hea koht juhtimiskonsultatsiooni või tarkvara demo CTA jaoks.",
+              text: "Hea koht juhtimiskonsultatsiooni või tarkvara demo nupu jaoks.",
               contact: "Tallinn • 55511066 • viirpuujanjoonas@gmail.com",
               button: "Vaata demo"
             }
@@ -2547,8 +2559,8 @@
           content: {
             hero: {
               eyebrow: "Visuaalne suund",
-              title: "Mockup, mida on lihtne kliendile ette saata",
-              description: "Päris piltide ja puhtama copyga näeb see välja rohkem valmis, vähem wireframe.",
+              title: "Näidisleht, mida on lihtne kliendile ette saata",
+              description: "Päris piltide ja puhtama sõnastusega näeb see välja rohkem valmis, vähem nagu karkass.",
               cta: "Vaata teenuseid",
               mediaLabel: "Galerii",
               mediaUrl: image.galleryOne
@@ -2560,7 +2572,7 @@
             ],
             trust: [
               "Päris fotod loovad usaldust",
-              "Hea müügivisuaal enne launchi",
+              "Hea müügivisuaal enne avaldamist",
               "Lihtne hiljem enda sisuga asendada"
             ],
             gallery: [
@@ -2595,8 +2607,8 @@
             ],
             trust: [
               "Kontakt leitav kohe",
-              "Sobib demo, pakkumise või konsultatsiooni CTA-ks",
-              "Hea viimane conversion section"
+              "Sobib demo, pakkumise või konsultatsiooni üleskutseks",
+              "Hea viimane müügiplokk"
             ],
             gallery: [
               { title: "Tallinn", text: "Siia saab hiljem panna päris mapi või ruumifoto.", image: image.studio },
@@ -2616,30 +2628,30 @@
           navigation: true,
           content: {
             hero: {
-              eyebrow: "Booking",
+              eyebrow: "Broneerimine",
               title: "Broneeri aeg ilma edasi-tagasi kirjutamata",
-              description: "Vali teenus, aeg ja kinnita. Just see funnel, mida klient vormis soovis.",
+              description: "Vali teenus, aeg ja kinnita. Just see broneerimisteekond, mida klient vormis soovis.",
               cta: "Broneeri demo",
-              mediaLabel: "Booking",
+              mediaLabel: "Broneerimine",
               mediaUrl: image.studio
             },
             cards: [
               { title: "Vali teenus", text: "Personaaltreening, juhtimiskonsultatsioon või tarkvara demo.", image: image.training },
               { title: "Vali aeg", text: "Kuupäev ja kellaaeg, ilma lisavajaduseta edasi-tagasi kirjutada.", image: image.management },
-              { title: "Kinnita", text: "Lihtne järgmine samm, mis sobib hästi premium landing page'i juurde.", image: image.software }
+              { title: "Kinnita", text: "Lihtne järgmine samm, mis sobib hästi premium maandumislehe juurde.", image: image.software }
             ],
             trust: [
-              "Kiire funnel",
+              "Kiire teekond",
               "Lihtne kasutuskogemus",
-              "Hea conversion section"
+              "Hea müügiplokk"
             ],
             gallery: [
-              { title: "Demo booking", text: "Hiljem saab ühendada päris kalendriga.", image: image.studio },
+              { title: "Demo broneering", text: "Hiljem saab ühendada päris kalendriga.", image: image.studio },
               { title: "Treeneriga kohtumine", text: "Personaalse teenuse tunne jääb alles.", image: image.hero }
             ],
             cta: {
               title: "Broneeri esimene kõne või demo",
-              text: "See leht võiks hiljem minna otse päris booking-lahenduse või kalendri peale.",
+              text: "See leht võiks hiljem minna otse päris broneerimislahenduse või kalendri peale.",
               contact: "55511066 • Tallinn",
               button: "Broneeri demo"
             }
@@ -2655,7 +2667,7 @@
       project.id = "aurora";
       project.domain = "aurorabeauty.ee";
       project.status = "Pooleli olev lehelülg";
-      project.source.instructions = "Beebiroosa, lavendli, helesinise ja kreemika tooniga ilutoodete ning iluteenuste koduleht. Ettevõtte nimi: Aurora. Näidissisu, hinnad ja tooted on loodud mockupiks.";
+      project.source.instructions = "Beebiroosa, lavendli, helesinise ja kreemika tooniga ilutoodete ning iluteenuste koduleht. Ettevõtte nimi: Aurora. Näidissisu, hinnad ja tooted on loodud näidiseks.";
       project.theme = {
         ...project.theme,
         bg: "#fff8fb",
@@ -2685,11 +2697,11 @@
           navigation: true,
           content: {
             hero: {
-              eyebrow: "Aurora skincare",
+              eyebrow: "Aurora nahahooldus",
               title: "Pehme rutiin. Vaikne sära.",
               description: "Õrnad näohooldused ja kodused lemmikud nahale, mis tahab rahu.",
               cta: "Broneeri aeg",
-              mediaLabel: "Skincare ritual",
+              mediaLabel: "Nahahooldusrituaal",
               mediaUrl: image.video
             },
             cards: [
@@ -2703,8 +2715,8 @@
               "Lihtne broneering"
             ],
             gallery: [
-              { title: "Morning glow", text: "Kolm sammu, mitte kümme.", image: image.serum },
-              { title: "Studio calm", text: "Aeg iseendale.", image: image.studio }
+              { title: "Hommikune sära", text: "Kolm sammu, mitte kümme.", image: image.serum },
+              { title: "Stuudiorahu", text: "Aeg iseendale.", image: image.studio }
             ],
             cta: {
               title: "Vali üks rahulik algus",
@@ -2720,7 +2732,7 @@
           navigation: true,
           content: {
             hero: {
-              eyebrow: "Aurora essentials",
+              eyebrow: "Aurora lemmikud",
               title: "Iluriiuli lemmikud beebiroosas pakendis.",
               description: "Näidiskollektsioon keskendub niisutusele, rahustamisele ja särale, ilma üleliigse mürata.",
               cta: "Vaata komplekte",
@@ -2733,7 +2745,7 @@
               { title: "Soft Reset mask - 22 €", text: "Roosa savi ja aloe rahustavad naha pärast pikka päeva.", image: image.mask }
             ],
             trust: [
-              "Starter komplekt: 69 €",
+              "Stardikomplekt: 69 €",
               "Tasuta tarne alates 55 €",
               "Näidised iga tellimusega"
             ],
@@ -2755,7 +2767,7 @@
           navigation: true,
           content: {
             hero: {
-              eyebrow: "Studio services",
+              eyebrow: "Stuudioteenused",
               title: "Hooldused, mis tunduvad nagu väike paus.",
               description: "Teenusemenüü on lühike ja selge: näohooldus, kulmud-ripsmed, maniküür ning kiire glow konsultatsioon.",
               cta: "Vali teenus",
@@ -2828,7 +2840,7 @@
           navigation: true,
           content: {
             hero: {
-              eyebrow: "Aurora story",
+              eyebrow: "Aurora lugu",
               title: "Ilurutiin, mis ei kiirusta sind tagant.",
               description: "Aurora on näidisbränd kliendile, kes soovib pehmet, usaldusväärset ja ostma kutsuvat ilulehte.",
               cta: "Kirjuta meile",
@@ -2841,17 +2853,17 @@
               { title: "Teenusefookus", text: "Broneering, konsultatsioon ja järeltooted töötavad ühe kogemusena.", image: image.facial }
             ],
             trust: [
-              "Inspireeritud tugevate beauty e-poodide selgest ostuteekonnast",
+              "Inspireeritud tugevate ilue-poodide selgest ostuteekonnast",
               "Sobib salongile, kosmeetikabrändile või hübriidärile",
               "Kõik tekstid ja hinnad on näidisena ise loodud"
             ],
             gallery: [
-              { title: "Pastel identity", text: "Roosa, lavendel, beebisinine ja kreem.", image: image.cream },
-              { title: "Calm commerce", text: "Ilus, aga siiski müügile orienteeritud.", image: image.studio }
+              { title: "Pastelne ilme", text: "Roosa, lavendel, beebisinine ja kreem.", image: image.cream },
+              { title: "Rahulik müügitunnetus", text: "Ilus, aga siiski müügile orienteeritud.", image: image.studio }
             ],
             cta: {
               title: "Aurora saab hiljem päris brändiks kohandada",
-              text: "Kui firma annab päris tooted, pildid ja hinnad, saab mockupi kiiresti üle kirjutada.",
+              text: "Kui firma annab päris tooted, pildid ja hinnad, saab näidislehe kiiresti päris sisuga asendada.",
               contact: "hello@aurorabeauty.ee • Tallinn",
               button: "Võta ühendust"
             }
@@ -2898,11 +2910,11 @@
           navigation: true,
           content: {
             hero: {
-              eyebrow: "Booking",
+              eyebrow: "Broneerimine",
               title: "Vali hooldus, aeg ja väike lisatoode.",
               description: "Broneeringuleht on mõeldud salongile: teenus, kuupäev, kellaaeg ja võimalus lisada koju kaasa toode.",
               cta: "Broneeri aeg",
-              mediaLabel: "Aurora booking",
+              mediaLabel: "Aurora broneering",
               mediaUrl: image.facial
             },
             cards: [
@@ -2916,12 +2928,12 @@
               "Esimesele külastajale -10% tooted"
             ],
             gallery: [
-              { title: "Before service", text: "Lühike konsultatsioon enne hooldust.", image: image.mask },
-              { title: "After glow", text: "Kodune rutiin aitab tulemust hoida.", image: image.cream }
+              { title: "Enne hooldust", text: "Lühike konsultatsioon enne hooldust.", image: image.mask },
+              { title: "Pärast särahetke", text: "Kodune rutiin aitab tulemust hoida.", image: image.cream }
             ],
             cta: {
               title: "Broneeri oma esimene Aurora hooldus",
-              text: "Hea lõppleht Instagrami, kampaania ja Google Business profiili jaoks.",
+              text: "Hea lõppleht Instagrami, kampaania ja Google'i ettevõtteprofiili jaoks.",
               contact: "E-R 10:00-19:00 • Telliskivi 12, Tallinn",
               button: "Broneeri aeg"
             }
@@ -3654,8 +3666,8 @@
       els.previewMeta.textContent = `${getBlueprint(project).label} · ${project.domain} · ${project.status}`;
       els.blueprintPill.textContent = getBlueprint(project).label;
       els.pagePill.textContent = page.title;
-      els.saveIndicator.textContent = state.lastSavedAt ? `Salvestatud ${state.lastSavedAt}` : "Autosave aktiivne";
-      els.previewModeBtn.textContent = state.previewMode ? "Tagasi editorisse" : "Preview";
+        els.saveIndicator.textContent = state.lastSavedAt ? `Salvestatud ${state.lastSavedAt}` : "Automaatsalvestus aktiivne";
+      els.previewModeBtn.textContent = state.previewMode ? "Tagasi redaktorisse" : "Eelvaade";
       document.querySelectorAll("[data-device]").forEach(button => {
         button.classList.toggle("active", button.dataset.device === state.device);
       });
@@ -3677,8 +3689,8 @@
       const blueprint = getBlueprint(project);
 
       if (state.activeStage === "generate") {
-        els.panelTitle.textContent = "Setup";
-        els.panelIntro.textContent = "Alusta ühest URL-ist, Facebookist või juhisest. Builder loob esimese starteri sinu eest.";
+        els.panelTitle.textContent = "Alustus";
+        els.panelIntro.textContent = "Alusta ühest URL-ist, Facebooki lehest või juhisest. Veebiehitaja loob esimese algversiooni sinu eest.";
         els.panelBody.innerHTML = renderGeneratePanel(project, blueprint);
         bindGeneratePanel();
         applyPendingEditorFocus();
@@ -3686,8 +3698,8 @@
       }
 
       if (state.activeStage === "structure") {
-        els.panelTitle.textContent = page.title || "Home page";
-        els.panelIntro.textContent = "Lehed ja sectionid. Vali, peida või muuda järjekorda nagu lihtsas theme editoris.";
+        els.panelTitle.textContent = page.title || "Avaleht";
+        els.panelIntro.textContent = "Lehed ja sektsioonid. Vali, peida või muuda järjekorda nagu lihtsas teemaredaktoris.";
         els.panelBody.innerHTML = renderStructurePanel(project, page);
         bindStructurePanel();
         applyPendingEditorFocus();
@@ -3695,8 +3707,8 @@
       }
 
       if (state.activeStage === "content") {
-        els.panelTitle.textContent = section?.label || "Content";
-        els.panelIntro.textContent = "Muuda ainult valitud sectioni sisu. Preview jääb suurelt nähtavaks.";
+        els.panelTitle.textContent = section?.label || "Sisu";
+        els.panelIntro.textContent = "Muuda ainult valitud sektsiooni sisu. Eelvaade jääb suurelt nähtavaks.";
         els.panelBody.innerHTML = renderContentPanel(page, section);
         bindContentPanel();
         applyPendingEditorFocus();
@@ -3704,8 +3716,8 @@
       }
 
       if (state.activeStage === "design") {
-        els.panelTitle.textContent = section?.label || "Theme";
-        els.panelIntro.textContent = "Muuda ainult paari olulist asja: värvid, fondid ja valitud sectioni variant.";
+        els.panelTitle.textContent = section?.label || "Välimus";
+        els.panelIntro.textContent = "Muuda ainult paari olulist asja: värvid, fondid ja valitud sektsiooni variant.";
         els.panelBody.innerHTML = renderDesignPanel(project, section);
         bindDesignPanel();
         applyPendingEditorFocus();
@@ -3713,8 +3725,8 @@
       }
 
       if (state.activeStage === "publish") {
-        els.panelTitle.textContent = "Publish";
-        els.panelIntro.textContent = "Salvesta mockup, ekspordi HTML ja lisa kliendi kontakt.";
+        els.panelTitle.textContent = "Avalda";
+        els.panelIntro.textContent = "Salvesta näidisvaade, ekspordi HTML ja lisa kliendi kontakt.";
         els.panelBody.innerHTML = renderPublishPanel(project);
         bindPublishPanel();
         applyPendingEditorFocus();
@@ -3726,7 +3738,7 @@
       return `
         <div class="settings-card project-switcher">
           <div class="field">
-            <label>Project</label>
+            <label>Projekt</label>
             <select id="projectSelect" class="top-select" aria-label="Vali projekt">
               <optgroup label="Pooleli olevad kodulehed">
                 ${state.projects.map(item => (
@@ -3739,13 +3751,13 @@
         </div>
 
         <div class="settings-card stack">
-          <h3>Input</h3>
+          <h3>Allikad</h3>
           <div class="field">
-            <label>Website URL</label>
+            <label>Veebilehe URL</label>
             <input id="sourceWebsite" value="${escapeAttr(project.source.websiteUrl)}" placeholder="https://ettevote.ee">
           </div>
           <div class="field">
-            <label>Facebook URL</label>
+            <label>Facebooki URL</label>
             <input id="sourceFacebook" value="${escapeAttr(project.source.facebookUrl)}" placeholder="https://facebook.com/ettevote">
           </div>
           <div class="field">
@@ -3753,14 +3765,14 @@
             <input id="sourceIndustryHint" value="${escapeAttr(project.source.industryHint)}" placeholder="Näiteks: premium ilusalong, perekohvik, ehitusfirma">
           </div>
           <div class="field">
-            <label>Instruction box</label>
-            <textarea id="sourceInstructions" placeholder="Kirjuta siia, mida builder peab rõhutama: millised lehed, milline toon, kas fookus on broneerimisel, toodetel, menüül, paketil, kontaktidel jne.">${escapeHtml(project.source.instructions)}</textarea>
+            <label>Juhiste kast</label>
+            <textarea id="sourceInstructions" placeholder="Kirjuta siia, mida ehitaja peab rõhutama: millised lehed, milline toon, kas fookus on broneerimisel, toodetel, menüül, paketil, kontaktidel jne.">${escapeHtml(project.source.instructions)}</textarea>
           </div>
           <div class="inline">
             <button id="generateBtn" class="btn-primary">Koonda info ja loo starter</button>
             <button id="starterResetBtn" class="btn-ghost">Lähtesta</button>
           </div>
-          <p class="compact-note">${escapeHtml(project.source.lastResult || "Scraper koondab tekstid, kontaktid, pildid, värvid ja pakub neist starteri.")}</p>
+          <p class="compact-note">${escapeHtml(project.source.lastResult || "Tööriist koondab tekstid, kontaktid, pildid ja värvid ning pakub neist algversiooni.")}</p>
         </div>
 
         <div class="settings-card">
@@ -3788,7 +3800,7 @@
       return `
         <div class="tree-group">
           <div class="tree-group-head">
-            <h3>Pages</h3>
+            <h3>Lehed</h3>
             <button id="addPageBtn" class="mini-btn">Lisa leht</button>
           </div>
           ${project.pages.map((item, index) => `
@@ -3801,7 +3813,7 @@
                 <div class="item-actions">
                   <button class="mini-btn" data-page-up="${item.id}" ${index === 0 ? "disabled" : ""}>↑</button>
                   <button class="mini-btn" data-page-down="${item.id}" ${index === project.pages.length - 1 ? "disabled" : ""}>↓</button>
-                  <button class="mini-btn ${item.navigation ? "active" : ""}" data-page-nav="${item.id}">${item.navigation ? "Nav" : "Hidden"}</button>
+                  <button class="mini-btn ${item.navigation ? "active" : ""}" data-page-nav="${item.id}">${item.navigation ? "Menüüs" : "Peidus"}</button>
                 </div>
               </div>
             </div>
@@ -3810,8 +3822,8 @@
 
         <div class="tree-group">
           <div class="tree-group-head">
-            <h3>Sections</h3>
-            <button id="addSectionBtn" class="mini-btn">Lisa section</button>
+            <h3>Sektsioonid</h3>
+            <button id="addSectionBtn" class="mini-btn">Lisa sektsioon</button>
           </div>
           <div class="section-list">
             ${page.sections.map((section, index) => `
@@ -3819,10 +3831,10 @@
                 <div class="section-item-row">
                   <button class="section-link" data-section="${section.id}">
                     <strong>${escapeHtml(section.label)}</strong>
-                    <span>${escapeHtml(section.type)} · ${escapeHtml(section.variant)}</span>
+                    <span>${escapeHtml(sectionTypeLabel(section.type))} · ${escapeHtml(sectionVariantLabel(section.variant))}</span>
                   </button>
                   <div class="item-actions">
-                    <button class="mini-btn ${section.enabled ? "active" : ""}" data-section-toggle="${section.id}">${section.enabled ? "On" : "Off"}</button>
+                    <button class="mini-btn ${section.enabled ? "active" : ""}" data-section-toggle="${section.id}">${section.enabled ? "Sees" : "Väljas"}</button>
                     <button class="mini-btn" data-section-up="${section.id}" ${index === 0 ? "disabled" : ""}>↑</button>
                     <button class="mini-btn" data-section-down="${section.id}" ${index === page.sections.length - 1 ? "disabled" : ""}>↓</button>
                   </div>
@@ -3833,11 +3845,11 @@
         </div>
 
         <div class="settings-card">
-          <h3>Selected</h3>
-          <p class="compact-note">${section ? `${section.label} · ${section.type} · ${section.variant}` : "Vali section preview pealt või nimekirjast."}</p>
+          <h3>Valitud</h3>
+          <p class="compact-note">${section ? `${section.label} · ${sectionTypeLabel(section.type)} · ${sectionVariantLabel(section.variant)}` : "Vali sektsioon eelvaatest või nimekirjast."}</p>
           <div class="inline">
             <span class="pill">${escapeHtml(page.title)}</span>
-            ${section ? `<span class="pill">${escapeHtml(section.enabled ? "Visible" : "Hidden")}</span>` : ""}
+            ${section ? `<span class="pill">${escapeHtml(section.enabled ? "Nähtav" : "Peidetud")}</span>` : ""}
           </div>
         </div>
       `;
@@ -3845,7 +3857,7 @@
 
     function renderContentPanel(page, section) {
       if (!section) {
-        return `<div class="settings-card"><h3>No section selected</h3><p>Vali kõigepealt section structure-vaates või preview pealt.</p></div>`;
+        return `<div class="settings-card"><h3>Sektsioon puudub</h3><p>Vali kõigepealt sektsioon lehtede vaatest või eelvaatest.</p></div>`;
       }
 
       const project = getProject();
@@ -3853,14 +3865,14 @@
       const pageSettingsKey = panelGroupKey(stage, page.id, section.id, "page-settings");
       const pageSettings = renderAccordion({
         key: pageSettingsKey,
-        title: "Leht ja section",
+        title: "Leht ja sektsioon",
         subtitle: `${page.title} · ${section.label}`,
         open: isPanelGroupOpen(pageSettingsKey, keyMatchesPendingEditor(["pageTitle", "pageSlug", "sectionLabel", "sectionButtonText"])),
         content: `
           <div class="field"><label>Menüü nimi</label><input id="pageTitle" data-editor-key="pageTitle" value="${escapeAttr(page.title)}"></div>
-          <div class="field"><label>Lehe slug</label><input id="pageSlug" data-editor-key="pageSlug" value="${escapeAttr(page.slug)}"></div>
-          <div class="field"><label>Section pealkiri</label><input id="contentSectionLabel" data-editor-key="sectionLabel" value="${escapeAttr(section.label)}"></div>
-          <div class="field"><label>Section nupu tekst</label><input id="contentSectionButtonText" data-editor-key="sectionButtonText" value="${escapeAttr(section.settings.buttonText || "Võta ühendust")}"></div>
+          <div class="field"><label>Lehe aadress</label><input id="pageSlug" data-editor-key="pageSlug" value="${escapeAttr(page.slug)}"></div>
+          <div class="field"><label>Sektsiooni pealkiri</label><input id="contentSectionLabel" data-editor-key="sectionLabel" value="${escapeAttr(section.label)}"></div>
+          <div class="field"><label>Sektsiooni nupu tekst</label><input id="contentSectionButtonText" data-editor-key="sectionButtonText" value="${escapeAttr(section.settings.buttonText || "Võta ühendust")}"></div>
         `
       });
 
@@ -3877,16 +3889,16 @@
           ${pageSettings}
           ${renderAccordion({
             key: heroKey,
-            title: "Hero content",
-            subtitle: "Pealkiri, CTA, pilt",
+            title: "Avaosa sisu",
+            subtitle: "Pealkiri, nupp, pilt",
             open: isPanelGroupOpen(heroKey, !pendingEditorKey || keyMatchesPendingEditor(["heroEyebrow", "heroTitle", "heroDescription", "heroCta", "heroMediaUrl", "heroMediaLabel"])),
             content: `
-              <div class="field"><label>Eyebrow</label><input id="heroEyebrow" data-editor-key="heroEyebrow" value="${escapeAttr(page.content.hero.eyebrow)}"></div>
+              <div class="field"><label>Ülapealkiri</label><input id="heroEyebrow" data-editor-key="heroEyebrow" value="${escapeAttr(page.content.hero.eyebrow)}"></div>
               <div class="field"><label>Pealkiri</label><textarea id="heroTitle" data-editor-key="heroTitle">${escapeHtml(page.content.hero.title)}</textarea></div>
               <div class="field"><label>Kirjeldus</label><textarea id="heroDescription" data-editor-key="heroDescription">${escapeHtml(page.content.hero.description)}</textarea></div>
-              <div class="field"><label>CTA</label><input id="heroCta" data-editor-key="heroCta" value="${escapeAttr(page.content.hero.cta)}"></div>
-              <div class="field"><label>Hero meedia URL</label><input id="heroMediaUrl" data-editor-key="heroMediaUrl" value="${escapeAttr(page.content.hero.mediaUrl || "")}" placeholder="https://..."></div>
-              ${renderImageActions("heroMediaUrl", "Laadi hero pilt üles")}
+              <div class="field"><label>Nupu tekst</label><input id="heroCta" data-editor-key="heroCta" value="${escapeAttr(page.content.hero.cta)}"></div>
+              <div class="field"><label>Avaosa meedia URL</label><input id="heroMediaUrl" data-editor-key="heroMediaUrl" value="${escapeAttr(page.content.hero.mediaUrl || "")}" placeholder="https://..."></div>
+              ${renderImageActions("heroMediaUrl", "Laadi avaosa pilt üles")}
               ${project.id === "ritali-ou" && page.id === "home" ? `
                 <div class="field"><label>Keskmise logo URL</label><input id="heroMediaLabel" data-editor-key="heroMediaLabel" value="${escapeAttr(page.content.hero.mediaLabel || "")}" placeholder="https://..."></div>
                 ${renderImageActions("heroMediaLabel", "Laadi logo üles")}
@@ -3905,22 +3917,22 @@
             title: section.label,
             subtitle: "Kaardid ja pildid",
             open: isPanelGroupOpen(headerKey, !pendingEditorKey),
-            content: `<p class="compact-note">Muuda ainult neid kaarte, mida selles sectionis näidatakse.</p>`
+            content: `<p class="compact-note">Muuda ainult neid kaarte, mida selles sektsioonis näidatakse.</p>`
           })}
           ${page.content.cards.map((card, index) => {
             const cardKey = panelGroupKey(stage, page.id, section.id, `card-${index}`);
             return renderAccordion({
               key: cardKey,
-              title: `Card ${index + 1}`,
-              subtitle: card.title || "Pealkirjata card",
+              title: `Kaart ${index + 1}`,
+              subtitle: card.title || "Pealkirjata kaart",
               open: isPanelGroupOpen(cardKey, keyMatchesPendingEditor([`cardTitle:${index}`, `cardMeta:${index}`, `cardPrice:${index}`, `cardText:${index}`, `cardImage:${index}`])),
               content: `
-                <div class="field"><label>Card ${index + 1} pealkiri</label><input data-editor-key="cardTitle:${index}" value="${escapeAttr(card.title)}"></div>
-                <div class="field"><label>Card ${index + 1} meta</label><input data-editor-key="cardMeta:${index}" value="${escapeAttr(card.meta || "")}" placeholder="Näiteks kategooria"></div>
-                <div class="field"><label>Card ${index + 1} hind</label><input data-editor-key="cardPrice:${index}" value="${escapeAttr(card.price || "")}" placeholder="Näiteks 49 €"></div>
-                <div class="field"><label>Card ${index + 1} tekst</label><textarea data-editor-key="cardText:${index}">${escapeHtml(card.text)}</textarea></div>
-                <div class="field"><label>Card ${index + 1} pildi URL</label><input data-editor-key="cardImage:${index}" value="${escapeAttr(card.image || "")}" placeholder="https://..."></div>
-                ${renderImageActions(`cardImage:${index}`, `Laadi card ${index + 1} pilt üles`)}
+                <div class="field"><label>Kaart ${index + 1} pealkiri</label><input data-editor-key="cardTitle:${index}" value="${escapeAttr(card.title)}"></div>
+                <div class="field"><label>Kaart ${index + 1} lisainfo</label><input data-editor-key="cardMeta:${index}" value="${escapeAttr(card.meta || "")}" placeholder="Näiteks kategooria"></div>
+                <div class="field"><label>Kaart ${index + 1} hind</label><input data-editor-key="cardPrice:${index}" value="${escapeAttr(card.price || "")}" placeholder="Näiteks 49 €"></div>
+                <div class="field"><label>Kaart ${index + 1} tekst</label><textarea data-editor-key="cardText:${index}">${escapeHtml(card.text)}</textarea></div>
+                <div class="field"><label>Kaart ${index + 1} pildi URL</label><input data-editor-key="cardImage:${index}" value="${escapeAttr(card.image || "")}" placeholder="https://..."></div>
+                ${renderImageActions(`cardImage:${index}`, `Laadi kaart ${index + 1} pilt üles`)}
               `
             });
           }).join("")}
@@ -3942,14 +3954,14 @@
             const galleryKey = panelGroupKey(stage, page.id, section.id, `gallery-${index}`);
             return renderAccordion({
               key: galleryKey,
-              title: `Gallery ${index + 1}`,
-              subtitle: item.title || "Pealkirjata gallery item",
+              title: `Galerii ${index + 1}`,
+              subtitle: item.title || "Pealkirjata galerii element",
               open: isPanelGroupOpen(galleryKey, keyMatchesPendingEditor([`galleryTitle:${index}`, `galleryText:${index}`, `galleryImage:${index}`])),
               content: `
-                <div class="field"><label>Gallery ${index + 1} pealkiri</label><input data-editor-key="galleryTitle:${index}" value="${escapeAttr(item.title)}"></div>
-                <div class="field"><label>Gallery ${index + 1} tekst</label><textarea data-editor-key="galleryText:${index}">${escapeHtml(item.text)}</textarea></div>
-                <div class="field"><label>Gallery ${index + 1} pildi URL</label><input data-editor-key="galleryImage:${index}" value="${escapeAttr(item.image || "")}" placeholder="https://..."></div>
-                ${renderImageActions(`galleryImage:${index}`, `Laadi gallery ${index + 1} pilt üles`)}
+                <div class="field"><label>Galerii ${index + 1} pealkiri</label><input data-editor-key="galleryTitle:${index}" value="${escapeAttr(item.title)}"></div>
+                <div class="field"><label>Galerii ${index + 1} tekst</label><textarea data-editor-key="galleryText:${index}">${escapeHtml(item.text)}</textarea></div>
+                <div class="field"><label>Galerii ${index + 1} pildi URL</label><input data-editor-key="galleryImage:${index}" value="${escapeAttr(item.image || "")}" placeholder="https://..."></div>
+                ${renderImageActions(`galleryImage:${index}`, `Laadi galerii ${index + 1} pilt üles`)}
               `
             });
           }).join("")}
@@ -3971,10 +3983,10 @@
             const trustKey = panelGroupKey(stage, page.id, section.id, `trust-${index}`);
             return renderAccordion({
               key: trustKey,
-              title: `Trust ${index + 1}`,
+              title: `Usalduspunkt ${index + 1}`,
               subtitle: item,
               open: isPanelGroupOpen(trustKey, keyMatchesPendingEditor([`trustItem:${index}`])),
-              content: `<div class="field"><label>Trust ${index + 1}</label><input data-editor-key="trustItem:${index}" value="${escapeAttr(item)}"></div>`
+              content: `<div class="field"><label>Usalduspunkt ${index + 1}</label><input data-editor-key="trustItem:${index}" value="${escapeAttr(item)}"></div>`
             });
           }).join("")}
         `;
@@ -3986,11 +3998,11 @@
         ${renderAccordion({
           key: ctaKey,
           title: section.label,
-          subtitle: "CTA ja kontakt",
+          subtitle: "Üleskutse ja kontakt",
           open: isPanelGroupOpen(ctaKey, !pendingEditorKey || keyMatchesPendingEditor(["ctaTitle", "ctaText", "ctaContact", "ctaButton"])),
           content: `
-            <div class="field"><label>CTA pealkiri</label><textarea id="ctaTitle" data-editor-key="ctaTitle">${escapeHtml(page.content.cta.title)}</textarea></div>
-            <div class="field"><label>CTA tekst</label><textarea id="ctaText" data-editor-key="ctaText">${escapeHtml(page.content.cta.text)}</textarea></div>
+            <div class="field"><label>Üleskutse pealkiri</label><textarea id="ctaTitle" data-editor-key="ctaTitle">${escapeHtml(page.content.cta.title)}</textarea></div>
+            <div class="field"><label>Üleskutse tekst</label><textarea id="ctaText" data-editor-key="ctaText">${escapeHtml(page.content.cta.text)}</textarea></div>
             <div class="field"><label>Kontaktinfo</label><input id="ctaContact" data-editor-key="ctaContact" value="${escapeAttr(page.content.cta.contact)}"></div>
             <div class="field"><label>Nupu tekst</label><input id="ctaButton" data-editor-key="ctaButton" value="${escapeAttr(page.content.cta.button)}"></div>
           `
@@ -4003,32 +4015,32 @@
       const currentBody = FONT_OPTIONS.find(option => option.value === project.theme.bodyFont)?.id || FONT_OPTIONS[0].id;
       return `
         <div class="settings-card">
-          <h3>Theme</h3>
+          <h3>Välimus</h3>
           <p>Muuda kogu lehe põhivärve ja fonte.</p>
           <div class="field">
-            <label>Background</label>
+            <label>Taust</label>
             <input id="themeBg" value="${escapeAttr(project.theme.bg)}" type="color">
           </div>
           <div class="field">
-            <label>Surface</label>
+            <label>Pind</label>
             <input id="themeSurface" value="${escapeAttr(project.theme.surface)}" type="color">
           </div>
           <div class="field">
-            <label>Text</label>
+            <label>Tekst</label>
             <input id="themeText" value="${escapeAttr(project.theme.text)}" type="color">
           </div>
           <div class="field">
-            <label>Accent</label>
+            <label>Rõhuvärv</label>
             <input id="themeAccent" value="${escapeAttr(project.theme.accent)}" type="color">
           </div>
           <div class="field">
-            <label>Display font</label>
+            <label>Pealkirjafont</label>
             <select id="themeDisplayFont">
               ${FONT_OPTIONS.map(option => `<option value="${option.id}" ${option.id === currentDisplay ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
             </select>
           </div>
           <div class="field">
-            <label>Body font</label>
+            <label>Sisufont</label>
             <select id="themeBodyFont">
               ${FONT_OPTIONS.map(option => `<option value="${option.id}" ${option.id === currentBody ? "selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
             </select>
@@ -4037,43 +4049,43 @@
 
         ${section ? `
           <div class="settings-card">
-            <h3>Selected section</h3>
+            <h3>Valitud sektsioon</h3>
             <p>${escapeHtml(section.label)} · muuda tausta, teksti ja nupu sõnastust.</p>
             <div class="field">
-              <label>Section label</label>
+              <label>Sektsiooni nimi</label>
               <input id="sectionLabel" value="${escapeAttr(section.label)}">
             </div>
             <div class="field">
               <label>Variant</label>
               <select id="sectionVariant">
-                ${sectionVariants(section.type).map(variant => `<option value="${variant}" ${variant === section.variant ? "selected" : ""}>${escapeHtml(variant)}</option>`).join("")}
+                ${sectionVariants(section.type).map(variant => `<option value="${variant}" ${variant === section.variant ? "selected" : ""}>${escapeHtml(sectionVariantLabel(variant))}</option>`).join("")}
               </select>
             </div>
             <div class="field">
-              <label>Background</label>
+              <label>Taust</label>
               <input id="sectionBackground" value="${escapeAttr(section.settings.background || "#ffffff")}" type="color">
             </div>
             <div class="field">
-              <label>Text color</label>
+              <label>Teksti värv</label>
               <input id="sectionTextColor" value="${escapeAttr(section.settings.textColor || "#172033")}" type="color">
             </div>
             <div class="field">
-              <label>Button text</label>
+              <label>Nupu tekst</label>
               <input id="sectionButtonText" value="${escapeAttr(section.settings.buttonText || "Võta ühendust")}">
             </div>
           </div>
-        ` : `<div class="settings-card"><h3>No section selected</h3><p>Vali section structure-vaates või preview pealt.</p></div>`}
+        ` : `<div class="settings-card"><h3>Sektsioon puudub</h3><p>Vali sektsioon lehtede vaatest või eelvaatest.</p></div>`}
       `;
     }
 
     function renderPublishPanel(project) {
       return `
         <div class="card stack">
-          <h3>Project status</h3>
+          <h3>Projekti olek</h3>
           <div class="status-list">
             <div class="status-item"><span>Projekt</span><strong>${escapeHtml(project.name)}</strong></div>
-            <div class="status-item"><span>Status</span><strong>${escapeHtml(project.status)}</strong></div>
-            <div class="status-item"><span>Cloud save</span><strong>${state.cloudAvailable ? "Saadaval" : "Lokaalne ainult"}</strong></div>
+            <div class="status-item"><span>Olek</span><strong>${escapeHtml(project.status)}</strong></div>
+            <div class="status-item"><span>Pilvesalvestus</span><strong>${state.cloudAvailable ? "Saadaval" : "Ainult lokaalne"}</strong></div>
           </div>
         </div>
         <div class="card stack">
@@ -4086,13 +4098,13 @@
             <input id="clientEmail" value="${escapeAttr(project.clientAccess.clientEmail)}">
           </div>
           <div class="inline">
-            <button id="publishSaveBtn" class="btn-primary">Salvesta projekti snapshot</button>
+            <button id="publishSaveBtn" class="btn-primary">Salvesta projekti koopia</button>
             <button id="publishExportBtn" class="btn">Ekspordi aktiivne HTML</button>
           </div>
         </div>
         <div class="card">
           <h3>Mõte</h3>
-          <p>See vaade on mõeldud selleks, et te saaksite valmis mockupi ära salvestada, kliendile ette näidata ja siis hiljem sama faili väga lihtsalt muuta.</p>
+          <p>See vaade on mõeldud selleks, et saaksite valmis näidislehe ära salvestada, kliendile ette näidata ja siis hiljem sama faili väga lihtsalt muuta.</p>
         </div>
       `;
     }
@@ -4101,11 +4113,11 @@
       return `
         <div class="card stack">
           <div class="field">
-            <label>SEO title</label>
+            <label>SEO pealkiri</label>
             <input id="seoTitle" value="${escapeAttr(page.seo.title)}">
           </div>
           <div class="field">
-            <label>Meta description</label>
+            <label>Metakirjeldus</label>
             <textarea id="seoDescription">${escapeHtml(page.seo.description)}</textarea>
           </div>
         </div>
@@ -4524,11 +4536,11 @@
       });
 
       document.querySelector("#addSectionBtn")?.addEventListener("click", () => {
-        const type = prompt("Section type: hero / cards / gallery / trust / cta", "cards");
+        const type = prompt("Sektsiooni tüüp: hero / cards / gallery / trust / cta", "cards");
         if (!type) return;
         const normalized = type.trim().toLowerCase();
         if (!["hero", "cards", "gallery", "trust", "cta"].includes(normalized)) return;
-        const label = prompt("Section label", normalized === "cards" ? "Uus plokk" : normalized);
+        const label = prompt("Sektsiooni nimi", normalized === "cards" ? "Uus plokk" : normalized);
         if (!label) return;
         const section = {
           id: uniqueId(normalized),
@@ -4728,7 +4740,7 @@
         autosave();
         showToast("Starter uuendatud");
       } catch (error) {
-        project.source.lastResult = `Scraping ebaõnnestus: ${error.message || error}`;
+        project.source.lastResult = `Andmete koondamine ebaõnnestus: ${error.message || error}`;
         renderPanel();
         autosave();
         showToast("Scraping ebaõnnestus");
@@ -5094,7 +5106,7 @@
         return `<section class="section"><div class="pad"><h2>${escapeHtml(section.label)}</h2><div class="grid2">${page.content.gallery.map(card => `<article class="card"><div class="card-media" style="${card.image ? `background-image:url('${escapeAttr(card.image)}')` : ""}"></div><div class="card-copy"><h3>${escapeHtml(card.title)}</h3><p>${escapeHtml(card.text)}</p></div></article>`).join("")}</div></div></section>`;
       }
       if (section.type === "trust") {
-        return `<section class="section"><div class="pad"><h2>${escapeHtml(section.label)}</h2><div class="grid3">${page.content.trust.map(item => `<article class="card"><div class="card-copy"><h3>${escapeHtml(item)}</h3><p>Supporting detail.</p></div></article>`).join("")}</div></div></section>`;
+        return `<section class="section"><div class="pad"><h2>${escapeHtml(section.label)}</h2><div class="grid3">${page.content.trust.map(item => `<article class="card"><div class="card-copy"><h3>${escapeHtml(item)}</h3><p>Lisaselgitus.</p></div></article>`).join("")}</div></div></section>`;
       }
       return `<section class="section"><div class="contact"><div><div class="eyebrow">${escapeHtml(section.label)}</div><h2>${escapeHtml(page.content.cta.title)}</h2><p>${escapeHtml(page.content.cta.text)}</p></div><div><p>${escapeHtml(page.content.cta.contact)}</p><div class="cta">${escapeHtml(page.content.cta.button)}</div></div></div></section>`;
     }
@@ -5407,6 +5419,38 @@
         cta: ["contact", "banner", "compact"]
       };
       return map[type] || ["default"];
+    }
+
+    function sectionTypeLabel(type) {
+      const map = {
+        hero: "avaosa",
+        cards: "kaardid",
+        gallery: "galerii",
+        trust: "usaldus",
+        cta: "kontaktplokk"
+      };
+      return map[type] || type;
+    }
+
+    function sectionVariantLabel(variant) {
+      const map = {
+        split: "jaotatud",
+        centered: "keskel",
+        editorial: "toimetuslik",
+        cards: "kaardid",
+        list: "nimekiri",
+        spotlight: "fookus",
+        grid: "ruudustik",
+        masonry: "mosaiik",
+        proof: "tõestus",
+        metrics: "numbrid",
+        stack: "virn",
+        contact: "kontakt",
+        banner: "ribaplokk",
+        compact: "kompaktne",
+        default: "vaikimisi"
+      };
+      return map[variant] || variant;
     }
 
     function slugify(value) {
