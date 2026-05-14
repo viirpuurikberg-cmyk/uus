@@ -620,6 +620,10 @@
       pointer-events: none;
     }
 
+    .ritali-home-logo [data-edit-key] {
+      pointer-events: auto;
+    }
+
     .ritali-home-logo img {
       width: clamp(260px, 42vw, 560px);
       max-height: 58vh;
@@ -1174,6 +1178,35 @@
       border-color: rgba(0, 91, 211, 0.32);
     }
 
+    .editable-text,
+    .editable-image {
+      cursor: pointer;
+      transition: outline-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
+    }
+
+    .editable-text {
+      outline: 2px solid transparent;
+      outline-offset: 4px;
+      border-radius: 10px;
+    }
+
+    .editable-text:hover,
+    .editable-text:focus-visible {
+      outline-color: rgba(0, 91, 211, 0.4);
+      background: rgba(0, 91, 211, 0.06);
+    }
+
+    .editable-image {
+      outline: 3px solid transparent;
+      outline-offset: -3px;
+    }
+
+    .editable-image:hover,
+    .editable-image:focus-visible {
+      outline-color: rgba(0, 91, 211, 0.72);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.4), 0 0 0 4px rgba(0, 91, 211, 0.14);
+    }
+
     .section-pad {
       padding: 22px;
     }
@@ -1404,6 +1437,11 @@
     .settings-card h3 {
       margin: 0;
       font-size: 14px;
+    }
+
+    .editor-focus-ring {
+      border-color: rgba(0, 91, 211, 0.34);
+      box-shadow: 0 0 0 4px rgba(0, 91, 211, 0.08);
     }
 
     .status-list {
@@ -2064,6 +2102,7 @@
     let toastTimer = 0;
     let trailerFrame = 0;
     let trailerBlobUrl = "";
+    let pendingEditorKey = "";
 
     init();
 
@@ -2071,6 +2110,7 @@
       render();
       bindTopbar();
       bindStageNav();
+      bindPreviewRoot();
       await hydrateProjectsFromCloud();
       render();
     }
@@ -3234,6 +3274,149 @@
       return page.sections.find(section => section.id === state.activeSectionId) || page.sections[0] || null;
     }
 
+    function getFirstSectionId(page = getPage()) {
+      return page.sections.find(section => section.enabled)?.id || page.sections[0]?.id || "";
+    }
+
+    function getSectionIdByType(page = getPage(), type = "") {
+      return page.sections.find(section => section.type === type)?.id || getFirstSectionId(page);
+    }
+
+    function editableAttrs({ key, kind = "text", pageId = state.activePageId, sectionId = state.activeSectionId, stage = "content" } = {}) {
+      return `data-edit-key="${escapeAttr(key)}" data-edit-kind="${escapeAttr(kind)}" data-edit-page="${escapeAttr(pageId)}" data-edit-section="${escapeAttr(sectionId || "")}" data-edit-stage="${escapeAttr(stage)}"`;
+    }
+
+    function bindPreviewRoot() {
+      els.sitePreview.addEventListener("click", handlePreviewClick);
+    }
+
+    function handlePreviewClick(event) {
+      const editNode = event.target.closest("[data-edit-key]");
+      if (editNode && els.sitePreview.contains(editNode)) {
+        event.preventDefault();
+        event.stopPropagation();
+        openEditor({
+          pageId: editNode.dataset.editPage || state.activePageId,
+          sectionId: editNode.dataset.editSection || state.activeSectionId,
+          key: editNode.dataset.editKey,
+          stage: editNode.dataset.editStage || "content"
+        });
+        return;
+      }
+
+      const pageNode = event.target.closest("[data-preview-page]");
+      if (pageNode && els.sitePreview.contains(pageNode)) {
+        state.activePageId = pageNode.dataset.previewPage;
+        state.activeSectionId = getFirstSectionId(getPage()) || "";
+        render();
+        saveState();
+        return;
+      }
+
+      const sectionNode = event.target.closest("[data-preview-section]");
+      if (!sectionNode || !els.sitePreview.contains(sectionNode)) return;
+      state.activeSectionId = sectionNode.dataset.previewSection;
+      renderPreview();
+      if (!["structure", "content", "design"].includes(state.activeStage)) {
+        state.activeStage = "structure";
+        renderPanel();
+      }
+      saveState();
+    }
+
+    function openEditor({ pageId = state.activePageId, sectionId = state.activeSectionId, key = "", stage = "content" } = {}) {
+      state.activePageId = pageId;
+      const page = getPage();
+      state.activeSectionId = sectionId || getFirstSectionId(page);
+      state.activeStage = stage;
+      pendingEditorKey = key;
+      render();
+      saveState();
+    }
+
+    function applyPendingEditorFocus() {
+      if (!pendingEditorKey) return;
+      const nodes = [...els.panelBody.querySelectorAll("[data-editor-key]")];
+      const target = nodes.find(node => node.dataset.editorKey === pendingEditorKey);
+      pendingEditorKey = "";
+      if (!target) return;
+      const highlightNode = target.closest(".field") || target.closest(".settings-card") || target;
+      highlightNode.classList.add("editor-focus-ring");
+      window.setTimeout(() => highlightNode.classList.remove("editor-focus-ring"), 1800);
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      target.focus({ preventScroll: true });
+      if (typeof target.select === "function" && target.tagName !== "SELECT") target.select();
+    }
+
+    function setEditorValueByKey(page, section, key, value) {
+      if (!page || !key) return false;
+      if (key === "pageTitle") {
+        page.title = value;
+        return true;
+      }
+      if (key === "pageSlug") {
+        page.slug = value;
+        return true;
+      }
+      if (key === "sectionLabel") {
+        if (!section) return false;
+        section.label = value;
+        return true;
+      }
+      if (key === "sectionButtonText") {
+        if (!section) return false;
+        section.settings.buttonText = value;
+        return true;
+      }
+      if (key === "heroEyebrow") return (page.content.hero.eyebrow = value, true);
+      if (key === "heroTitle") return (page.content.hero.title = value, true);
+      if (key === "heroDescription") return (page.content.hero.description = value, true);
+      if (key === "heroCta") return (page.content.hero.cta = value, true);
+      if (key === "heroMediaUrl") return (page.content.hero.mediaUrl = value, true);
+      if (key === "heroMediaLabel") return (page.content.hero.mediaLabel = value, true);
+      if (key === "ctaTitle") return (page.content.cta.title = value, true);
+      if (key === "ctaText") return (page.content.cta.text = value, true);
+      if (key === "ctaContact") return (page.content.cta.contact = value, true);
+      if (key === "ctaButton") return (page.content.cta.button = value, true);
+
+      const match = /^(cardTitle|cardMeta|cardPrice|cardText|cardImage|galleryTitle|galleryText|galleryImage|trustItem):(\d+)$/.exec(key);
+      if (!match) return false;
+      const [, field, rawIndex] = match;
+      const index = Number(rawIndex);
+      if (field.startsWith("card")) {
+        const card = page.content.cards[index];
+        if (!card) return false;
+        if (field === "cardTitle") card.title = value;
+        if (field === "cardMeta") card.meta = value;
+        if (field === "cardPrice") card.price = value;
+        if (field === "cardText") card.text = value;
+        if (field === "cardImage") card.image = value;
+        return true;
+      }
+      if (field.startsWith("gallery")) {
+        const item = page.content.gallery[index];
+        if (!item) return false;
+        if (field === "galleryTitle") item.title = value;
+        if (field === "galleryText") item.text = value;
+        if (field === "galleryImage") item.image = value;
+        return true;
+      }
+      if (field === "trustItem") {
+        page.content.trust[index] = value;
+        return true;
+      }
+      return false;
+    }
+
+    async function fileToDataUrl(file) {
+      return await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = () => reject(reader.error || new Error("File read failed"));
+        reader.readAsDataURL(file);
+      });
+    }
+
     function bindTopbar() {
       els.saveBtn.addEventListener("click", async () => {
         await saveProjectToCloud();
@@ -3333,6 +3516,7 @@
         els.panelIntro.textContent = "Alusta ühest URL-ist, Facebookist või juhisest. Builder loob esimese starteri sinu eest.";
         els.panelBody.innerHTML = renderGeneratePanel(project, blueprint);
         bindGeneratePanel();
+        applyPendingEditorFocus();
         return;
       }
 
@@ -3341,6 +3525,7 @@
         els.panelIntro.textContent = "Lehed ja sectionid. Vali, peida või muuda järjekorda nagu lihtsas theme editoris.";
         els.panelBody.innerHTML = renderStructurePanel(project, page);
         bindStructurePanel();
+        applyPendingEditorFocus();
         return;
       }
 
@@ -3349,6 +3534,7 @@
         els.panelIntro.textContent = "Muuda ainult valitud sectioni sisu. Preview jääb suurelt nähtavaks.";
         els.panelBody.innerHTML = renderContentPanel(page, section);
         bindContentPanel();
+        applyPendingEditorFocus();
         return;
       }
 
@@ -3357,6 +3543,7 @@
         els.panelIntro.textContent = "Muuda ainult paari olulist asja: värvid, fondid ja valitud sectioni variant.";
         els.panelBody.innerHTML = renderDesignPanel(project, section);
         bindDesignPanel();
+        applyPendingEditorFocus();
         return;
       }
 
@@ -3365,6 +3552,7 @@
         els.panelIntro.textContent = "Salvesta mockup, ekspordi HTML ja lisa kliendi kontakt.";
         els.panelBody.innerHTML = renderPublishPanel(project);
         bindPublishPanel();
+        applyPendingEditorFocus();
         return;
       }
     }
@@ -3495,30 +3683,51 @@
         return `<div class="settings-card"><h3>No section selected</h3><p>Vali kõigepealt section structure-vaates või preview pealt.</p></div>`;
       }
 
+      const project = getProject();
+      const pageSettings = `
+        <div class="settings-card stack">
+          <h3>Leht ja section</h3>
+          <div class="field"><label>Menüü nimi</label><input id="pageTitle" data-editor-key="pageTitle" value="${escapeAttr(page.title)}"></div>
+          <div class="field"><label>Lehe slug</label><input id="pageSlug" data-editor-key="pageSlug" value="${escapeAttr(page.slug)}"></div>
+          <div class="field"><label>Section pealkiri</label><input id="contentSectionLabel" data-editor-key="sectionLabel" value="${escapeAttr(section.label)}"></div>
+          <div class="field"><label>Section nupu tekst</label><input id="contentSectionButtonText" data-editor-key="sectionButtonText" value="${escapeAttr(section.settings.buttonText || "Võta ühendust")}"></div>
+        </div>
+      `;
+
       if (section.type === "hero") {
         return `
+          ${pageSettings}
           <div class="settings-card stack">
             <h3>Hero content</h3>
-            <div class="field"><label>Eyebrow</label><input id="heroEyebrow" value="${escapeAttr(page.content.hero.eyebrow)}"></div>
-            <div class="field"><label>Pealkiri</label><textarea id="heroTitle">${escapeHtml(page.content.hero.title)}</textarea></div>
-            <div class="field"><label>Kirjeldus</label><textarea id="heroDescription">${escapeHtml(page.content.hero.description)}</textarea></div>
-            <div class="field"><label>CTA</label><input id="heroCta" value="${escapeAttr(page.content.hero.cta)}"></div>
-            <div class="field"><label>Hero pildi URL</label><input id="heroMediaUrl" value="${escapeAttr(page.content.hero.mediaUrl || "")}" placeholder="https://..."></div>
+            <div class="field"><label>Eyebrow</label><input id="heroEyebrow" data-editor-key="heroEyebrow" value="${escapeAttr(page.content.hero.eyebrow)}"></div>
+            <div class="field"><label>Pealkiri</label><textarea id="heroTitle" data-editor-key="heroTitle">${escapeHtml(page.content.hero.title)}</textarea></div>
+            <div class="field"><label>Kirjeldus</label><textarea id="heroDescription" data-editor-key="heroDescription">${escapeHtml(page.content.hero.description)}</textarea></div>
+            <div class="field"><label>CTA</label><input id="heroCta" data-editor-key="heroCta" value="${escapeAttr(page.content.hero.cta)}"></div>
+            <div class="field"><label>Hero meedia URL</label><input id="heroMediaUrl" data-editor-key="heroMediaUrl" value="${escapeAttr(page.content.hero.mediaUrl || "")}" placeholder="https://..."></div>
+            <div class="field"><label>Laadi hero pilt üles</label><input type="file" data-upload-key="heroMediaUrl" accept="image/*"></div>
+            ${project.id === "ritali-ou" && page.id === "home" ? `
+              <div class="field"><label>Keskmise logo URL</label><input id="heroMediaLabel" data-editor-key="heroMediaLabel" value="${escapeAttr(page.content.hero.mediaLabel || "")}" placeholder="https://..."></div>
+              <div class="field"><label>Laadi logo üles</label><input type="file" data-upload-key="heroMediaLabel" accept="image/*"></div>
+            ` : ""}
           </div>
         `;
       }
 
       if (section.type === "cards") {
         return `
+          ${pageSettings}
           <div class="settings-card">
             <h3>${escapeHtml(section.label)}</h3>
             <p>Muuda ainult neid kaarte, mida selles sectionis näidatakse.</p>
           </div>
           ${page.content.cards.map((card, index) => `
             <div class="settings-card stack">
-              <div class="field"><label>Card ${index + 1} pealkiri</label><input data-card-title="${index}" value="${escapeAttr(card.title)}"></div>
-              <div class="field"><label>Card ${index + 1} tekst</label><textarea data-card-text="${index}">${escapeHtml(card.text)}</textarea></div>
-              <div class="field"><label>Card ${index + 1} pildi URL</label><input data-card-image="${index}" value="${escapeAttr(card.image || "")}" placeholder="https://..."></div>
+              <div class="field"><label>Card ${index + 1} pealkiri</label><input data-editor-key="cardTitle:${index}" value="${escapeAttr(card.title)}"></div>
+              <div class="field"><label>Card ${index + 1} meta</label><input data-editor-key="cardMeta:${index}" value="${escapeAttr(card.meta || "")}" placeholder="Näiteks kategooria"></div>
+              <div class="field"><label>Card ${index + 1} hind</label><input data-editor-key="cardPrice:${index}" value="${escapeAttr(card.price || "")}" placeholder="Näiteks 49 €"></div>
+              <div class="field"><label>Card ${index + 1} tekst</label><textarea data-editor-key="cardText:${index}">${escapeHtml(card.text)}</textarea></div>
+              <div class="field"><label>Card ${index + 1} pildi URL</label><input data-editor-key="cardImage:${index}" value="${escapeAttr(card.image || "")}" placeholder="https://..."></div>
+              <div class="field"><label>Laadi card ${index + 1} pilt üles</label><input type="file" data-upload-key="cardImage:${index}" accept="image/*"></div>
             </div>
           `).join("")}
         `;
@@ -3526,15 +3735,17 @@
 
       if (section.type === "gallery") {
         return `
+          ${pageSettings}
           <div class="settings-card">
             <h3>${escapeHtml(section.label)}</h3>
             <p>Galerii või tootevisuaalid ainult selle ploki jaoks.</p>
           </div>
           ${page.content.gallery.map((item, index) => `
             <div class="settings-card stack">
-              <div class="field"><label>Gallery ${index + 1} pealkiri</label><input data-gallery-title="${index}" value="${escapeAttr(item.title)}"></div>
-              <div class="field"><label>Gallery ${index + 1} tekst</label><textarea data-gallery-text="${index}">${escapeHtml(item.text)}</textarea></div>
-              <div class="field"><label>Gallery ${index + 1} pildi URL</label><input data-gallery-image="${index}" value="${escapeAttr(item.image || "")}" placeholder="https://..."></div>
+              <div class="field"><label>Gallery ${index + 1} pealkiri</label><input data-editor-key="galleryTitle:${index}" value="${escapeAttr(item.title)}"></div>
+              <div class="field"><label>Gallery ${index + 1} tekst</label><textarea data-editor-key="galleryText:${index}">${escapeHtml(item.text)}</textarea></div>
+              <div class="field"><label>Gallery ${index + 1} pildi URL</label><input data-editor-key="galleryImage:${index}" value="${escapeAttr(item.image || "")}" placeholder="https://..."></div>
+              <div class="field"><label>Laadi gallery ${index + 1} pilt üles</label><input type="file" data-upload-key="galleryImage:${index}" accept="image/*"></div>
             </div>
           `).join("")}
         `;
@@ -3542,25 +3753,27 @@
 
       if (section.type === "trust") {
         return `
+          ${pageSettings}
           <div class="settings-card">
             <h3>${escapeHtml(section.label)}</h3>
             <p>Lühikesed usaldust loovad punktid.</p>
           </div>
           ${page.content.trust.map((item, index) => `
             <div class="settings-card">
-              <div class="field"><label>Trust ${index + 1}</label><input data-trust-item="${index}" value="${escapeAttr(item)}"></div>
+              <div class="field"><label>Trust ${index + 1}</label><input data-editor-key="trustItem:${index}" value="${escapeAttr(item)}"></div>
             </div>
           `).join("")}
         `;
       }
 
       return `
+        ${pageSettings}
         <div class="settings-card stack">
           <h3>${escapeHtml(section.label)}</h3>
-          <div class="field"><label>CTA pealkiri</label><textarea id="ctaTitle">${escapeHtml(page.content.cta.title)}</textarea></div>
-          <div class="field"><label>CTA tekst</label><textarea id="ctaText">${escapeHtml(page.content.cta.text)}</textarea></div>
-          <div class="field"><label>Kontaktinfo</label><input id="ctaContact" value="${escapeAttr(page.content.cta.contact)}"></div>
-          <div class="field"><label>Nupu tekst</label><input id="ctaButton" value="${escapeAttr(page.content.cta.button)}"></div>
+          <div class="field"><label>CTA pealkiri</label><textarea id="ctaTitle" data-editor-key="ctaTitle">${escapeHtml(page.content.cta.title)}</textarea></div>
+          <div class="field"><label>CTA tekst</label><textarea id="ctaText" data-editor-key="ctaText">${escapeHtml(page.content.cta.text)}</textarea></div>
+          <div class="field"><label>Kontaktinfo</label><input id="ctaContact" data-editor-key="ctaContact" value="${escapeAttr(page.content.cta.contact)}"></div>
+          <div class="field"><label>Nupu tekst</label><input id="ctaButton" data-editor-key="ctaButton" value="${escapeAttr(page.content.cta.button)}"></div>
         </div>
       `;
     }
@@ -3707,34 +3920,13 @@
         <div class="site-nav">
           <div class="site-brand">${escapeHtml(project.name)}</div>
           <div class="site-links">
-            ${navPages.map(item => `<button class="${item.id === page.id ? "current" : ""}" data-preview-page="${item.id}">${escapeHtml(item.title)}</button>`).join("")}
+            ${navPages.map(item => `<button class="editable-text ${item.id === page.id ? "current" : ""}" data-preview-page="${item.id}" ${editableAttrs({ key: "pageTitle", pageId: item.id, sectionId: getFirstSectionId(item) })}>${escapeHtml(item.title)}</button>`).join("")}
           </div>
         </div>
         <div class="site-main">
           ${sectionsHtml}
         </div>
       `;
-
-      els.sitePreview.querySelectorAll("[data-preview-page]").forEach(button => {
-        button.addEventListener("click", () => {
-          state.activePageId = button.dataset.previewPage;
-          state.activeSectionId = getPage().sections[0]?.id || "";
-          render();
-          saveState();
-        });
-      });
-
-      els.sitePreview.querySelectorAll("[data-preview-section]").forEach(node => {
-        node.addEventListener("click", () => {
-          state.activeSectionId = node.dataset.previewSection;
-          renderPreview();
-          if (state.activeStage !== "structure" && state.activeStage !== "content" && state.activeStage !== "design") {
-            state.activeStage = "structure";
-            renderPanel();
-          }
-          saveState();
-        });
-      });
     }
 
     function isRitaLIHome(project, page) {
@@ -3756,11 +3948,11 @@
       return `
         <header class="ritali-site-header ${onVideo ? "on-video" : ""}">
           <div></div>
-          <button class="ritali-header-logo" data-preview-page="home" aria-label="Avaleht">
+          <button class="ritali-header-logo editable-image" data-preview-page="home" ${editableAttrs({ key: "heroMediaLabel", kind: "image", pageId: "home", sectionId: getFirstSectionId(homePage || project.pages[0]) })} aria-label="Avaleht">
             <img src="${escapeAttr(logo)}" alt="Salong Maagia logo">
           </button>
           <nav class="ritali-page-nav" aria-label="RitaLI lisalehed">
-            ${navPages.map(item => `<button class="${item.id === page.id ? "current" : ""}" data-preview-page="${item.id}">${escapeHtml(item.title)}</button>`).join("")}
+            ${navPages.map(item => `<button class="editable-text ${item.id === page.id ? "current" : ""}" data-preview-page="${item.id}" ${editableAttrs({ key: "pageTitle", pageId: item.id, sectionId: getFirstSectionId(item) })}>${escapeHtml(item.title)}</button>`).join("")}
           </nav>
         </header>
       `;
@@ -3776,9 +3968,9 @@
         ${renderRitaLIHeader(project, page)}
         <main class="ritali-clean-main">
           <section class="ritali-clean-title">
-            <div class="eyebrow">${escapeHtml(page.content.hero.eyebrow)}</div>
-            <h1>${escapeHtml(page.content.hero.title)}</h1>
-            <p>${escapeHtml(page.content.hero.description)}</p>
+            <div class="eyebrow editable-text" ${editableAttrs({ key: "heroEyebrow", pageId: page.id, sectionId: getSectionIdByType(page, "hero") })}>${escapeHtml(page.content.hero.eyebrow)}</div>
+            <h1 class="editable-text" ${editableAttrs({ key: "heroTitle", pageId: page.id, sectionId: getSectionIdByType(page, "hero") })}>${escapeHtml(page.content.hero.title)}</h1>
+            <p class="editable-text" ${editableAttrs({ key: "heroDescription", pageId: page.id, sectionId: getSectionIdByType(page, "hero") })}>${escapeHtml(page.content.hero.description)}</p>
           </section>
           ${sectionsHtml}
         </main>
@@ -3789,10 +3981,10 @@
       const hero = page.content.hero;
       return `
         <section class="ritali-landing" data-preview-section="${page.sections[0]?.id || ""}">
-          <video src="${escapeAttr(hero.mediaUrl)}" autoplay muted loop playsinline poster="https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1600&q=82"></video>
+          <video class="editable-image" ${editableAttrs({ key: "heroMediaUrl", kind: "image", pageId: page.id, sectionId: page.sections[0]?.id || "" })} src="${escapeAttr(hero.mediaUrl)}" autoplay muted loop playsinline poster="https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1600&q=82"></video>
           ${renderRitaLIHeader(project, page, true)}
           <div class="ritali-home-logo">
-            <img src="${escapeAttr(hero.mediaLabel)}" alt="Salong Maagia logo">
+            <img class="editable-image" ${editableAttrs({ key: "heroMediaLabel", kind: "image", pageId: page.id, sectionId: page.sections[0]?.id || "" })} src="${escapeAttr(hero.mediaLabel)}" alt="Salong Maagia logo">
           </div>
         </section>
       `;
@@ -3808,14 +4000,14 @@
           <section class="site-section ${section.id === state.activeSectionId ? "selected" : ""}" data-preview-section="${section.id}" style="${sectionStyle}">
             <div class="section-pad hero-grid">
               <div>
-                <div class="eyebrow">${escapeHtml(hero.eyebrow)}</div>
-                <h1 class="hero-title">${escapeHtml(hero.title)}</h1>
-                <p class="hero-text">${escapeHtml(hero.description)}</p>
+                <div class="eyebrow editable-text" ${editableAttrs({ key: "heroEyebrow", pageId: page.id, sectionId: section.id })}>${escapeHtml(hero.eyebrow)}</div>
+                <h1 class="hero-title editable-text" ${editableAttrs({ key: "heroTitle", pageId: page.id, sectionId: section.id })}>${escapeHtml(hero.title)}</h1>
+                <p class="hero-text editable-text" ${editableAttrs({ key: "heroDescription", pageId: page.id, sectionId: section.id })}>${escapeHtml(hero.description)}</p>
                 <div class="hero-actions">
-                  <div class="site-cta">${escapeHtml(hero.cta)}</div>
+                  <div class="site-cta editable-text" ${editableAttrs({ key: "heroCta", pageId: page.id, sectionId: section.id })}>${escapeHtml(hero.cta)}</div>
                 </div>
               </div>
-              <div class="hero-visual" style="${visualStyle}">
+              <div class="hero-visual editable-image" ${editableAttrs({ key: "heroMediaUrl", kind: "image", pageId: page.id, sectionId: section.id })} style="${visualStyle}">
                 ${hasVideo ? `<video src="${escapeAttr(hero.mediaUrl)}" autoplay muted loop playsinline></video>` : ""}
                 ${hasVideo ? "" : `<strong>${escapeHtml(hero.mediaLabel || project.name)}</strong><span>Visuaal või tootefoto</span>`}
               </div>
@@ -3832,15 +4024,15 @@
           <section class="site-section ${section.id === state.activeSectionId ? "selected" : ""}" data-preview-section="${section.id}" style="${sectionStyle}">
             <div class="section-pad">
               <div class="section-head">
-                <h2 class="section-title">${escapeHtml(section.label)}</h2>
+                <h2 class="section-title editable-text" ${editableAttrs({ key: "sectionLabel", pageId: page.id, sectionId: section.id })}>${escapeHtml(section.label)}</h2>
               </div>
               <div class="card-grid">
-                ${page.content.cards.map(card => `
+                ${page.content.cards.map((card, index) => `
                   <article class="site-card">
-                    <div class="site-card-media" style="${card.image ? `background-image:url('${escapeAttr(card.image)}')` : ""}"></div>
+                    <div class="site-card-media editable-image" ${editableAttrs({ key: `cardImage:${index}`, kind: "image", pageId: page.id, sectionId: section.id })} style="${card.image ? `background-image:url('${escapeAttr(card.image)}')` : ""}"></div>
                     <div class="site-card-body">
-                      <h3>${escapeHtml(card.title)}</h3>
-                      <p>${escapeHtml(card.text)}</p>
+                      <h3 class="editable-text" ${editableAttrs({ key: `cardTitle:${index}`, pageId: page.id, sectionId: section.id })}>${escapeHtml(card.title)}</h3>
+                      <p class="editable-text" ${editableAttrs({ key: `cardText:${index}`, pageId: page.id, sectionId: section.id })}>${escapeHtml(card.text)}</p>
                     </div>
                   </article>
                 `).join("")}
@@ -3855,15 +4047,15 @@
           <section class="site-section ${section.id === state.activeSectionId ? "selected" : ""}" data-preview-section="${section.id}" style="${sectionStyle}">
             <div class="section-pad">
               <div class="section-head">
-                <h2 class="section-title">${escapeHtml(section.label)}</h2>
+                <h2 class="section-title editable-text" ${editableAttrs({ key: "sectionLabel", pageId: page.id, sectionId: section.id })}>${escapeHtml(section.label)}</h2>
               </div>
               <div class="gallery-grid">
-                ${page.content.gallery.map(item => `
+                ${page.content.gallery.map((item, index) => `
                   <article class="site-card">
-                    <div class="gallery-card" style="${item.image ? `background-image:url('${escapeAttr(item.image)}')` : ""}"></div>
+                    <div class="gallery-card editable-image" ${editableAttrs({ key: `galleryImage:${index}`, kind: "image", pageId: page.id, sectionId: section.id })} style="${item.image ? `background-image:url('${escapeAttr(item.image)}')` : ""}"></div>
                     <div class="gallery-card-copy">
-                      <h3>${escapeHtml(item.title)}</h3>
-                      <p>${escapeHtml(item.text)}</p>
+                      <h3 class="editable-text" ${editableAttrs({ key: `galleryTitle:${index}`, pageId: page.id, sectionId: section.id })}>${escapeHtml(item.title)}</h3>
+                      <p class="editable-text" ${editableAttrs({ key: `galleryText:${index}`, pageId: page.id, sectionId: section.id })}>${escapeHtml(item.text)}</p>
                     </div>
                   </article>
                 `).join("")}
@@ -3878,12 +4070,12 @@
           <section class="site-section ${section.id === state.activeSectionId ? "selected" : ""}" data-preview-section="${section.id}" style="${sectionStyle}">
             <div class="section-pad">
               <div class="section-head">
-                <h2 class="section-title">${escapeHtml(section.label)}</h2>
+                <h2 class="section-title editable-text" ${editableAttrs({ key: "sectionLabel", pageId: page.id, sectionId: section.id })}>${escapeHtml(section.label)}</h2>
               </div>
               <div class="trust-grid">
-                ${page.content.trust.map(item => `
+                ${page.content.trust.map((item, index) => `
                   <article class="trust-card">
-                    <h3>${escapeHtml(item)}</h3>
+                    <h3 class="editable-text" ${editableAttrs({ key: `trustItem:${index}`, pageId: page.id, sectionId: section.id })}>${escapeHtml(item)}</h3>
                     <p>Builder toob siia sama väite alla vajadusel supporting detaili või numbri.</p>
                   </article>
                 `).join("")}
@@ -3897,13 +4089,13 @@
         <section class="site-section ${section.id === state.activeSectionId ? "selected" : ""}" data-preview-section="${section.id}" style="${sectionStyle}">
           <div class="contact-grid">
             <div>
-              <div class="eyebrow">${escapeHtml(section.label)}</div>
-              <h2 class="cta-title">${escapeHtml(page.content.cta.title)}</h2>
-              <p class="cta-text">${escapeHtml(page.content.cta.text)}</p>
+              <div class="eyebrow editable-text" ${editableAttrs({ key: "sectionLabel", pageId: page.id, sectionId: section.id })}>${escapeHtml(section.label)}</div>
+              <h2 class="cta-title editable-text" ${editableAttrs({ key: "ctaTitle", pageId: page.id, sectionId: section.id })}>${escapeHtml(page.content.cta.title)}</h2>
+              <p class="cta-text editable-text" ${editableAttrs({ key: "ctaText", pageId: page.id, sectionId: section.id })}>${escapeHtml(page.content.cta.text)}</p>
             </div>
             <div class="stack">
-              <div class="meta-list">${escapeHtml(page.content.cta.contact)}</div>
-              <div class="site-cta">${escapeHtml(page.content.cta.button || section.settings.buttonText || "Võta ühendust")}</div>
+              <div class="meta-list editable-text" ${editableAttrs({ key: "ctaContact", pageId: page.id, sectionId: section.id })}>${escapeHtml(page.content.cta.contact)}</div>
+              <div class="site-cta editable-text" ${editableAttrs({ key: "ctaButton", pageId: page.id, sectionId: section.id })}>${escapeHtml(page.content.cta.button || section.settings.buttonText || "Võta ühendust")}</div>
             </div>
           </div>
         </section>
@@ -3915,21 +4107,21 @@
         <section class="site-section ${section.id === state.activeSectionId ? "selected" : ""}" data-preview-section="${section.id}">
           <div class="section-pad">
             <div class="section-head">
-              <h2 class="section-title">${escapeHtml(section.label)}</h2>
+              <h2 class="section-title editable-text" ${editableAttrs({ key: "sectionLabel", pageId: page.id, sectionId: section.id })}>${escapeHtml(section.label)}</h2>
             </div>
             <div class="ritali-feature-grid">
-              ${page.content.cards.map(card => `
-                <article class="ritali-service-card" tabindex="0" style="--card-image:url('${escapeAttr(card.image)}')">
+              ${page.content.cards.map((card, index) => `
+                <article class="ritali-service-card editable-image" ${editableAttrs({ key: `cardImage:${index}`, kind: "image", pageId: page.id, sectionId: section.id })} tabindex="0" style="--card-image:url('${escapeAttr(card.image)}')">
                   <div class="ritali-service-summary">
-                    <span class="ritali-price">${escapeHtml(card.price)}</span>
-                    <h3>${escapeHtml(card.title)}</h3>
+                    <span class="ritali-price editable-text" ${editableAttrs({ key: `cardPrice:${index}`, pageId: page.id, sectionId: section.id })}>${escapeHtml(card.price)}</span>
+                    <h3 class="editable-text" ${editableAttrs({ key: `cardTitle:${index}`, pageId: page.id, sectionId: section.id })}>${escapeHtml(card.title)}</h3>
                   </div>
                   <div class="ritali-service-overlay">
-                    <span class="ritali-kicker">${escapeHtml(card.meta)}</span>
-                    <h3>${escapeHtml(card.title)}</h3>
-                    <p>${escapeHtml(card.text)}</p>
-                    <span class="ritali-price">${escapeHtml(card.price)}</span>
-                    <button class="ritali-action-btn">Broneeri</button>
+                    <span class="ritali-kicker editable-text" ${editableAttrs({ key: `cardMeta:${index}`, pageId: page.id, sectionId: section.id })}>${escapeHtml(card.meta)}</span>
+                    <h3 class="editable-text" ${editableAttrs({ key: `cardTitle:${index}`, pageId: page.id, sectionId: section.id })}>${escapeHtml(card.title)}</h3>
+                    <p class="editable-text" ${editableAttrs({ key: `cardText:${index}`, pageId: page.id, sectionId: section.id })}>${escapeHtml(card.text)}</p>
+                    <span class="ritali-price editable-text" ${editableAttrs({ key: `cardPrice:${index}`, pageId: page.id, sectionId: section.id })}>${escapeHtml(card.price)}</span>
+                    <button class="ritali-action-btn editable-text" ${editableAttrs({ key: "sectionButtonText", pageId: page.id, sectionId: section.id })}>${escapeHtml(section.settings.buttonText || "Broneeri")}</button>
                   </div>
                 </article>
               `).join("")}
@@ -3944,18 +4136,18 @@
         <section class="site-section ${section.id === state.activeSectionId ? "selected" : ""}" data-preview-section="${section.id}">
           <div class="section-pad">
             <div class="section-head">
-              <h2 class="section-title">${escapeHtml(section.label)}</h2>
+              <h2 class="section-title editable-text" ${editableAttrs({ key: "sectionLabel", pageId: page.id, sectionId: section.id })}>${escapeHtml(section.label)}</h2>
             </div>
             <div class="ritali-product-grid">
               ${page.content.cards.map((card, index) => `
                 <article class="ritali-product-card ${index % 2 === 1 ? "opens-left" : ""}" tabindex="0">
-                  <div class="ritali-product-image" style="--card-image:url('${escapeAttr(card.image)}')"></div>
+                  <div class="ritali-product-image editable-image" ${editableAttrs({ key: `cardImage:${index}`, kind: "image", pageId: page.id, sectionId: section.id })} style="--card-image:url('${escapeAttr(card.image)}')"></div>
                   <div class="ritali-product-info">
-                    <button class="ritali-action-btn">Osta</button>
-                    <span class="ritali-kicker">${escapeHtml(card.meta)}</span>
-                    <h3>${escapeHtml(card.title)}</h3>
-                    <p>${escapeHtml(card.text)}</p>
-                    <span class="ritali-price">${escapeHtml(card.price)}</span>
+                    <button class="ritali-action-btn editable-text" ${editableAttrs({ key: "sectionButtonText", pageId: page.id, sectionId: section.id })}>${escapeHtml(section.settings.buttonText || "Osta")}</button>
+                    <span class="ritali-kicker editable-text" ${editableAttrs({ key: `cardMeta:${index}`, pageId: page.id, sectionId: section.id })}>${escapeHtml(card.meta)}</span>
+                    <h3 class="editable-text" ${editableAttrs({ key: `cardTitle:${index}`, pageId: page.id, sectionId: section.id })}>${escapeHtml(card.title)}</h3>
+                    <p class="editable-text" ${editableAttrs({ key: `cardText:${index}`, pageId: page.id, sectionId: section.id })}>${escapeHtml(card.text)}</p>
+                    <span class="ritali-price editable-text" ${editableAttrs({ key: `cardPrice:${index}`, pageId: page.id, sectionId: section.id })}>${escapeHtml(card.price)}</span>
                   </div>
                 </article>
               `).join("")}
@@ -3970,12 +4162,12 @@
         <section class="site-section ${section.id === state.activeSectionId ? "selected" : ""}" data-preview-section="${section.id}">
           <div class="section-pad">
             <div class="ritali-blog-grid">
-              ${page.content.cards.map(card => `
-                <article class="ritali-blog-card" style="--card-image:url('${escapeAttr(card.image)}')">
+              ${page.content.cards.map((card, index) => `
+                <article class="ritali-blog-card editable-image" ${editableAttrs({ key: `cardImage:${index}`, kind: "image", pageId: page.id, sectionId: section.id })} style="--card-image:url('${escapeAttr(card.image)}')">
                   <div class="ritali-blog-copy">
-                    <span class="ritali-kicker">${escapeHtml(card.meta)}</span>
-                    <h3>${escapeHtml(card.title)}</h3>
-                    <p>${escapeHtml(card.text)}</p>
+                    <span class="ritali-kicker editable-text" ${editableAttrs({ key: `cardMeta:${index}`, pageId: page.id, sectionId: section.id })}>${escapeHtml(card.meta)}</span>
+                    <h3 class="editable-text" ${editableAttrs({ key: `cardTitle:${index}`, pageId: page.id, sectionId: section.id })}>${escapeHtml(card.title)}</h3>
+                    <p class="editable-text" ${editableAttrs({ key: `cardText:${index}`, pageId: page.id, sectionId: section.id })}>${escapeHtml(card.text)}</p>
                   </div>
                 </article>
               `).join("")}
@@ -4134,54 +4326,31 @@
 
     function bindContentPanel() {
       const page = getPage();
-      const mapInput = (selector, target, key) => {
-        document.querySelector(selector)?.addEventListener("input", event => {
-          target[key] = event.target.value;
-          renderPreview();
-          autosave();
-        });
-      };
-      mapInput("#heroEyebrow", page.content.hero, "eyebrow");
-      mapInput("#heroTitle", page.content.hero, "title");
-      mapInput("#heroDescription", page.content.hero, "description");
-      mapInput("#heroCta", page.content.hero, "cta");
-      mapInput("#heroMediaUrl", page.content.hero, "mediaUrl");
-      mapInput("#ctaTitle", page.content.cta, "title");
-      mapInput("#ctaText", page.content.cta, "text");
-      mapInput("#ctaContact", page.content.cta, "contact");
-      mapInput("#ctaButton", page.content.cta, "button");
-
-      document.querySelectorAll("[data-card-title],[data-card-text],[data-card-image]").forEach(input => {
+      const section = getSection(page);
+      els.panelBody.querySelectorAll("[data-editor-key]").forEach(input => {
         input.addEventListener("input", event => {
-          const index = Number(event.target.dataset.cardTitle ?? event.target.dataset.cardText ?? event.target.dataset.cardImage);
-          const card = page.content.cards[index];
-          if (!card) return;
-          if (event.target.dataset.cardTitle !== undefined) card.title = event.target.value;
-          if (event.target.dataset.cardText !== undefined) card.text = event.target.value;
-          if (event.target.dataset.cardImage !== undefined) card.image = event.target.value;
+          const key = event.target.dataset.editorKey;
+          if (!setEditorValueByKey(page, section, key, event.target.value)) return;
+          if (key === "pageTitle" || key === "pageSlug") renderTopbar();
           renderPreview();
           autosave();
         });
       });
 
-      document.querySelectorAll("[data-trust-item]").forEach(input => {
-        input.addEventListener("input", event => {
-          page.content.trust[Number(event.target.dataset.trustItem)] = event.target.value;
+      els.panelBody.querySelectorAll("[data-upload-key]").forEach(input => {
+        input.addEventListener("change", async event => {
+          const file = event.target.files?.[0];
+          if (!file) return;
+          const key = event.target.dataset.uploadKey;
+          const value = await fileToDataUrl(file);
+          if (!setEditorValueByKey(page, section, key, value)) return;
+          const pairedInput = [...els.panelBody.querySelectorAll("[data-editor-key]")].find(node => node.dataset.editorKey === key);
+          if (pairedInput) pairedInput.value = value;
           renderPreview();
           autosave();
-        });
-      });
-
-      document.querySelectorAll("[data-gallery-title],[data-gallery-text],[data-gallery-image]").forEach(input => {
-        input.addEventListener("input", event => {
-          const index = Number(event.target.dataset.galleryTitle ?? event.target.dataset.galleryText ?? event.target.dataset.galleryImage);
-          const item = page.content.gallery[index];
-          if (!item) return;
-          if (event.target.dataset.galleryTitle !== undefined) item.title = event.target.value;
-          if (event.target.dataset.galleryText !== undefined) item.text = event.target.value;
-          if (event.target.dataset.galleryImage !== undefined) item.image = event.target.value;
-          renderPreview();
-          autosave();
+          pendingEditorKey = key;
+          applyPendingEditorFocus();
+          showToast("Meedia uuendatud");
         });
       });
     }
