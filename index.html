@@ -1444,6 +1444,53 @@
       box-shadow: 0 0 0 4px rgba(0, 91, 211, 0.08);
     }
 
+    .settings-accordion {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .settings-accordion summary {
+      list-style: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      font-weight: 800;
+      font-size: 14px;
+    }
+
+    .settings-accordion summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .settings-accordion summary span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .settings-accordion summary::after {
+      content: "▾";
+      color: var(--muted);
+      font-size: 16px;
+      transition: transform 140ms ease;
+    }
+
+    .settings-accordion[open] summary::after {
+      transform: rotate(180deg);
+    }
+
+    .settings-accordion-body {
+      border-top: 1px solid var(--line);
+      padding: 14px;
+      display: grid;
+      gap: 12px;
+    }
+
     .status-list {
       display: grid;
       gap: 8px;
@@ -2091,6 +2138,7 @@
       activeSectionId: "hero",
       device: "desktop",
       previewMode: false,
+      panelOpen: {},
       lastSavedAt: "",
       cloudAvailable: true
     };
@@ -3329,6 +3377,7 @@
       const page = getPage();
       state.activeSectionId = sectionId || getFirstSectionId(page);
       state.activeStage = stage;
+      expandPanelGroupsForEditorKey(key, page.id, state.activeSectionId, stage);
       pendingEditorKey = key;
       render();
       saveState();
@@ -3408,6 +3457,41 @@
       return false;
     }
 
+    function expandPanelGroupsForEditorKey(key, pageId = state.activePageId, sectionId = state.activeSectionId, stage = "content") {
+      if (!key) return;
+      const pageSettingsKey = panelGroupKey(stage, pageId, sectionId, "page-settings");
+      const openKey = group => setPanelGroupOpen(panelGroupKey(stage, pageId, sectionId, group), true);
+      if (["pageTitle", "pageSlug", "sectionLabel", "sectionButtonText"].includes(key)) {
+        setPanelGroupOpen(pageSettingsKey, true);
+        return;
+      }
+      if (["heroEyebrow", "heroTitle", "heroDescription", "heroCta", "heroMediaUrl", "heroMediaLabel"].includes(key)) {
+        openKey("hero");
+        return;
+      }
+      const match = /^(cardTitle|cardMeta|cardPrice|cardText|cardImage|galleryTitle|galleryText|galleryImage|trustItem):(\d+)$/.exec(key);
+      if (match) {
+        const [, type, rawIndex] = match;
+        const index = Number(rawIndex);
+        if (type.startsWith("card")) openKey(`card-${index}`);
+        if (type.startsWith("gallery")) openKey(`gallery-${index}`);
+        if (type === "trustItem") openKey(`trust-${index}`);
+        return;
+      }
+      if (["ctaTitle", "ctaText", "ctaContact", "ctaButton"].includes(key)) {
+        openKey("cta");
+      }
+    }
+
+    function bindPanelAccordions() {
+      els.panelBody.querySelectorAll("[data-panel-group]").forEach(node => {
+        node.addEventListener("toggle", () => {
+          setPanelGroupOpen(node.dataset.panelGroup, node.open);
+          saveState(false);
+        });
+      });
+    }
+
     async function fileToDataUrl(file) {
       return await new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -3415,6 +3499,22 @@
         reader.onerror = () => reject(reader.error || new Error("File read failed"));
         reader.readAsDataURL(file);
       });
+    }
+
+    function keyMatchesPendingEditor(matchers) {
+      if (!pendingEditorKey) return false;
+      return matchers.some(matcher => pendingEditorKey === matcher || pendingEditorKey.startsWith(`${matcher}:`));
+    }
+
+    function renderAccordion({ key, title, subtitle = "", content, open = false }) {
+      return `
+        <details class="settings-accordion" data-panel-group="${escapeAttr(key)}" ${open ? "open" : ""}>
+          <summary>${escapeHtml(title)}${subtitle ? `<span>${escapeHtml(subtitle)}</span>` : ""}</summary>
+          <div class="settings-accordion-body">
+            ${content}
+          </div>
+        </details>
+      `;
     }
 
     function bindTopbar() {
@@ -3684,97 +3784,145 @@
       }
 
       const project = getProject();
-      const pageSettings = `
-        <div class="settings-card stack">
-          <h3>Leht ja section</h3>
+      const stage = "content";
+      const pageSettingsKey = panelGroupKey(stage, page.id, section.id, "page-settings");
+      const pageSettings = renderAccordion({
+        key: pageSettingsKey,
+        title: "Leht ja section",
+        subtitle: `${page.title} · ${section.label}`,
+        open: isPanelGroupOpen(pageSettingsKey, keyMatchesPendingEditor(["pageTitle", "pageSlug", "sectionLabel", "sectionButtonText"])),
+        content: `
           <div class="field"><label>Menüü nimi</label><input id="pageTitle" data-editor-key="pageTitle" value="${escapeAttr(page.title)}"></div>
           <div class="field"><label>Lehe slug</label><input id="pageSlug" data-editor-key="pageSlug" value="${escapeAttr(page.slug)}"></div>
           <div class="field"><label>Section pealkiri</label><input id="contentSectionLabel" data-editor-key="sectionLabel" value="${escapeAttr(section.label)}"></div>
           <div class="field"><label>Section nupu tekst</label><input id="contentSectionButtonText" data-editor-key="sectionButtonText" value="${escapeAttr(section.settings.buttonText || "Võta ühendust")}"></div>
-        </div>
-      `;
+        `
+      });
 
       if (section.type === "hero") {
+        const heroKey = panelGroupKey(stage, page.id, section.id, "hero");
         return `
           ${pageSettings}
-          <div class="settings-card stack">
-            <h3>Hero content</h3>
-            <div class="field"><label>Eyebrow</label><input id="heroEyebrow" data-editor-key="heroEyebrow" value="${escapeAttr(page.content.hero.eyebrow)}"></div>
-            <div class="field"><label>Pealkiri</label><textarea id="heroTitle" data-editor-key="heroTitle">${escapeHtml(page.content.hero.title)}</textarea></div>
-            <div class="field"><label>Kirjeldus</label><textarea id="heroDescription" data-editor-key="heroDescription">${escapeHtml(page.content.hero.description)}</textarea></div>
-            <div class="field"><label>CTA</label><input id="heroCta" data-editor-key="heroCta" value="${escapeAttr(page.content.hero.cta)}"></div>
-            <div class="field"><label>Hero meedia URL</label><input id="heroMediaUrl" data-editor-key="heroMediaUrl" value="${escapeAttr(page.content.hero.mediaUrl || "")}" placeholder="https://..."></div>
-            <div class="field"><label>Laadi hero pilt üles</label><input type="file" data-upload-key="heroMediaUrl" accept="image/*"></div>
-            ${project.id === "ritali-ou" && page.id === "home" ? `
-              <div class="field"><label>Keskmise logo URL</label><input id="heroMediaLabel" data-editor-key="heroMediaLabel" value="${escapeAttr(page.content.hero.mediaLabel || "")}" placeholder="https://..."></div>
-              <div class="field"><label>Laadi logo üles</label><input type="file" data-upload-key="heroMediaLabel" accept="image/*"></div>
-            ` : ""}
-          </div>
+          ${renderAccordion({
+            key: heroKey,
+            title: "Hero content",
+            subtitle: "Pealkiri, CTA, pilt",
+            open: isPanelGroupOpen(heroKey, !pendingEditorKey || keyMatchesPendingEditor(["heroEyebrow", "heroTitle", "heroDescription", "heroCta", "heroMediaUrl", "heroMediaLabel"])),
+            content: `
+              <div class="field"><label>Eyebrow</label><input id="heroEyebrow" data-editor-key="heroEyebrow" value="${escapeAttr(page.content.hero.eyebrow)}"></div>
+              <div class="field"><label>Pealkiri</label><textarea id="heroTitle" data-editor-key="heroTitle">${escapeHtml(page.content.hero.title)}</textarea></div>
+              <div class="field"><label>Kirjeldus</label><textarea id="heroDescription" data-editor-key="heroDescription">${escapeHtml(page.content.hero.description)}</textarea></div>
+              <div class="field"><label>CTA</label><input id="heroCta" data-editor-key="heroCta" value="${escapeAttr(page.content.hero.cta)}"></div>
+              <div class="field"><label>Hero meedia URL</label><input id="heroMediaUrl" data-editor-key="heroMediaUrl" value="${escapeAttr(page.content.hero.mediaUrl || "")}" placeholder="https://..."></div>
+              <div class="field"><label>Laadi hero pilt üles</label><input type="file" data-upload-key="heroMediaUrl" accept="image/*"></div>
+              ${project.id === "ritali-ou" && page.id === "home" ? `
+                <div class="field"><label>Keskmise logo URL</label><input id="heroMediaLabel" data-editor-key="heroMediaLabel" value="${escapeAttr(page.content.hero.mediaLabel || "")}" placeholder="https://..."></div>
+                <div class="field"><label>Laadi logo üles</label><input type="file" data-upload-key="heroMediaLabel" accept="image/*"></div>
+              ` : ""}
+            `
+          })}
         `;
       }
 
       if (section.type === "cards") {
+        const headerKey = panelGroupKey(stage, page.id, section.id, "cards-header");
         return `
           ${pageSettings}
-          <div class="settings-card">
-            <h3>${escapeHtml(section.label)}</h3>
-            <p>Muuda ainult neid kaarte, mida selles sectionis näidatakse.</p>
-          </div>
-          ${page.content.cards.map((card, index) => `
-            <div class="settings-card stack">
-              <div class="field"><label>Card ${index + 1} pealkiri</label><input data-editor-key="cardTitle:${index}" value="${escapeAttr(card.title)}"></div>
-              <div class="field"><label>Card ${index + 1} meta</label><input data-editor-key="cardMeta:${index}" value="${escapeAttr(card.meta || "")}" placeholder="Näiteks kategooria"></div>
-              <div class="field"><label>Card ${index + 1} hind</label><input data-editor-key="cardPrice:${index}" value="${escapeAttr(card.price || "")}" placeholder="Näiteks 49 €"></div>
-              <div class="field"><label>Card ${index + 1} tekst</label><textarea data-editor-key="cardText:${index}">${escapeHtml(card.text)}</textarea></div>
-              <div class="field"><label>Card ${index + 1} pildi URL</label><input data-editor-key="cardImage:${index}" value="${escapeAttr(card.image || "")}" placeholder="https://..."></div>
-              <div class="field"><label>Laadi card ${index + 1} pilt üles</label><input type="file" data-upload-key="cardImage:${index}" accept="image/*"></div>
-            </div>
-          `).join("")}
+          ${renderAccordion({
+            key: headerKey,
+            title: section.label,
+            subtitle: "Kaardid ja pildid",
+            open: isPanelGroupOpen(headerKey, !pendingEditorKey),
+            content: `<p class="compact-note">Muuda ainult neid kaarte, mida selles sectionis näidatakse.</p>`
+          })}
+          ${page.content.cards.map((card, index) => {
+            const cardKey = panelGroupKey(stage, page.id, section.id, `card-${index}`);
+            return renderAccordion({
+              key: cardKey,
+              title: `Card ${index + 1}`,
+              subtitle: card.title || "Pealkirjata card",
+              open: isPanelGroupOpen(cardKey, keyMatchesPendingEditor([`cardTitle:${index}`, `cardMeta:${index}`, `cardPrice:${index}`, `cardText:${index}`, `cardImage:${index}`])),
+              content: `
+                <div class="field"><label>Card ${index + 1} pealkiri</label><input data-editor-key="cardTitle:${index}" value="${escapeAttr(card.title)}"></div>
+                <div class="field"><label>Card ${index + 1} meta</label><input data-editor-key="cardMeta:${index}" value="${escapeAttr(card.meta || "")}" placeholder="Näiteks kategooria"></div>
+                <div class="field"><label>Card ${index + 1} hind</label><input data-editor-key="cardPrice:${index}" value="${escapeAttr(card.price || "")}" placeholder="Näiteks 49 €"></div>
+                <div class="field"><label>Card ${index + 1} tekst</label><textarea data-editor-key="cardText:${index}">${escapeHtml(card.text)}</textarea></div>
+                <div class="field"><label>Card ${index + 1} pildi URL</label><input data-editor-key="cardImage:${index}" value="${escapeAttr(card.image || "")}" placeholder="https://..."></div>
+                <div class="field"><label>Laadi card ${index + 1} pilt üles</label><input type="file" data-upload-key="cardImage:${index}" accept="image/*"></div>
+              `
+            });
+          }).join("")}
         `;
       }
 
       if (section.type === "gallery") {
+        const headerKey = panelGroupKey(stage, page.id, section.id, "gallery-header");
         return `
           ${pageSettings}
-          <div class="settings-card">
-            <h3>${escapeHtml(section.label)}</h3>
-            <p>Galerii või tootevisuaalid ainult selle ploki jaoks.</p>
-          </div>
-          ${page.content.gallery.map((item, index) => `
-            <div class="settings-card stack">
-              <div class="field"><label>Gallery ${index + 1} pealkiri</label><input data-editor-key="galleryTitle:${index}" value="${escapeAttr(item.title)}"></div>
-              <div class="field"><label>Gallery ${index + 1} tekst</label><textarea data-editor-key="galleryText:${index}">${escapeHtml(item.text)}</textarea></div>
-              <div class="field"><label>Gallery ${index + 1} pildi URL</label><input data-editor-key="galleryImage:${index}" value="${escapeAttr(item.image || "")}" placeholder="https://..."></div>
-              <div class="field"><label>Laadi gallery ${index + 1} pilt üles</label><input type="file" data-upload-key="galleryImage:${index}" accept="image/*"></div>
-            </div>
-          `).join("")}
+          ${renderAccordion({
+            key: headerKey,
+            title: section.label,
+            subtitle: "Galerii elemendid",
+            open: isPanelGroupOpen(headerKey, !pendingEditorKey),
+            content: `<p class="compact-note">Galerii või tootevisuaalid ainult selle ploki jaoks.</p>`
+          })}
+          ${page.content.gallery.map((item, index) => {
+            const galleryKey = panelGroupKey(stage, page.id, section.id, `gallery-${index}`);
+            return renderAccordion({
+              key: galleryKey,
+              title: `Gallery ${index + 1}`,
+              subtitle: item.title || "Pealkirjata gallery item",
+              open: isPanelGroupOpen(galleryKey, keyMatchesPendingEditor([`galleryTitle:${index}`, `galleryText:${index}`, `galleryImage:${index}`])),
+              content: `
+                <div class="field"><label>Gallery ${index + 1} pealkiri</label><input data-editor-key="galleryTitle:${index}" value="${escapeAttr(item.title)}"></div>
+                <div class="field"><label>Gallery ${index + 1} tekst</label><textarea data-editor-key="galleryText:${index}">${escapeHtml(item.text)}</textarea></div>
+                <div class="field"><label>Gallery ${index + 1} pildi URL</label><input data-editor-key="galleryImage:${index}" value="${escapeAttr(item.image || "")}" placeholder="https://..."></div>
+                <div class="field"><label>Laadi gallery ${index + 1} pilt üles</label><input type="file" data-upload-key="galleryImage:${index}" accept="image/*"></div>
+              `
+            });
+          }).join("")}
         `;
       }
 
       if (section.type === "trust") {
+        const headerKey = panelGroupKey(stage, page.id, section.id, "trust-header");
         return `
           ${pageSettings}
-          <div class="settings-card">
-            <h3>${escapeHtml(section.label)}</h3>
-            <p>Lühikesed usaldust loovad punktid.</p>
-          </div>
-          ${page.content.trust.map((item, index) => `
-            <div class="settings-card">
-              <div class="field"><label>Trust ${index + 1}</label><input data-editor-key="trustItem:${index}" value="${escapeAttr(item)}"></div>
-            </div>
-          `).join("")}
+          ${renderAccordion({
+            key: headerKey,
+            title: section.label,
+            subtitle: "Usalduspunktid",
+            open: isPanelGroupOpen(headerKey, !pendingEditorKey),
+            content: `<p class="compact-note">Lühikesed usaldust loovad punktid.</p>`
+          })}
+          ${page.content.trust.map((item, index) => {
+            const trustKey = panelGroupKey(stage, page.id, section.id, `trust-${index}`);
+            return renderAccordion({
+              key: trustKey,
+              title: `Trust ${index + 1}`,
+              subtitle: item,
+              open: isPanelGroupOpen(trustKey, keyMatchesPendingEditor([`trustItem:${index}`])),
+              content: `<div class="field"><label>Trust ${index + 1}</label><input data-editor-key="trustItem:${index}" value="${escapeAttr(item)}"></div>`
+            });
+          }).join("")}
         `;
       }
 
+      const ctaKey = panelGroupKey(stage, page.id, section.id, "cta");
       return `
         ${pageSettings}
-        <div class="settings-card stack">
-          <h3>${escapeHtml(section.label)}</h3>
-          <div class="field"><label>CTA pealkiri</label><textarea id="ctaTitle" data-editor-key="ctaTitle">${escapeHtml(page.content.cta.title)}</textarea></div>
-          <div class="field"><label>CTA tekst</label><textarea id="ctaText" data-editor-key="ctaText">${escapeHtml(page.content.cta.text)}</textarea></div>
-          <div class="field"><label>Kontaktinfo</label><input id="ctaContact" data-editor-key="ctaContact" value="${escapeAttr(page.content.cta.contact)}"></div>
-          <div class="field"><label>Nupu tekst</label><input id="ctaButton" data-editor-key="ctaButton" value="${escapeAttr(page.content.cta.button)}"></div>
-        </div>
+        ${renderAccordion({
+          key: ctaKey,
+          title: section.label,
+          subtitle: "CTA ja kontakt",
+          open: isPanelGroupOpen(ctaKey, !pendingEditorKey || keyMatchesPendingEditor(["ctaTitle", "ctaText", "ctaContact", "ctaButton"])),
+          content: `
+            <div class="field"><label>CTA pealkiri</label><textarea id="ctaTitle" data-editor-key="ctaTitle">${escapeHtml(page.content.cta.title)}</textarea></div>
+            <div class="field"><label>CTA tekst</label><textarea id="ctaText" data-editor-key="ctaText">${escapeHtml(page.content.cta.text)}</textarea></div>
+            <div class="field"><label>Kontaktinfo</label><input id="ctaContact" data-editor-key="ctaContact" value="${escapeAttr(page.content.cta.contact)}"></div>
+            <div class="field"><label>Nupu tekst</label><input id="ctaButton" data-editor-key="ctaButton" value="${escapeAttr(page.content.cta.button)}"></div>
+          `
+        })}
       `;
     }
 
@@ -4327,6 +4475,7 @@
     function bindContentPanel() {
       const page = getPage();
       const section = getSection(page);
+      bindPanelAccordions();
       els.panelBody.querySelectorAll("[data-editor-key]").forEach(input => {
         input.addEventListener("input", event => {
           const key = event.target.dataset.editorKey;
@@ -5173,6 +5322,19 @@
 
     function unique(values) {
       return [...new Set((values || []).filter(Boolean))];
+    }
+
+    function panelGroupKey(stage, pageId, sectionId, group) {
+      return [stage, pageId, sectionId, group].filter(Boolean).join("::");
+    }
+
+    function isPanelGroupOpen(key, fallback = false) {
+      return state.panelOpen?.[key] ?? fallback;
+    }
+
+    function setPanelGroupOpen(key, open) {
+      state.panelOpen ||= {};
+      state.panelOpen[key] = open;
     }
 
     function timeNow() {
