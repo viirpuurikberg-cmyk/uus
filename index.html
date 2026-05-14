@@ -624,8 +624,20 @@
       pointer-events: auto;
     }
 
-    .ritali-home-logo img {
+    .ritali-home-logo-button {
+      pointer-events: auto;
+      background: none;
+      border: 0;
+      padding: 0;
+      display: grid;
+      place-items: center;
       width: clamp(260px, 42vw, 560px);
+      max-width: 100%;
+      cursor: pointer;
+    }
+
+    .ritali-home-logo img {
+      width: 100%;
       max-height: 58vh;
       object-fit: contain;
       pointer-events: none;
@@ -641,6 +653,10 @@
     .preview-frame.device-mobile .ritali-home-logo img {
       width: min(76vw, 330px);
       max-height: 42vh;
+    }
+
+    .preview-frame.device-mobile .ritali-home-logo-button {
+      width: min(76vw, 330px);
     }
 
     .site-shell.ritali-clean {
@@ -671,7 +687,7 @@
       position: absolute;
       inset: 0 0 auto;
       background: transparent;
-      border-bottom-color: rgba(255,255,255,0.26);
+      border-bottom: 0;
       color: #fff;
     }
 
@@ -4096,9 +4112,11 @@
       return `
         <header class="ritali-site-header ${onVideo ? "on-video" : ""}">
           <div></div>
-          <button class="ritali-header-logo editable-image" data-preview-page="home" ${editableAttrs({ key: "heroMediaLabel", kind: "image", pageId: "home", sectionId: getFirstSectionId(homePage || project.pages[0]) })} aria-label="Avaleht">
-            <img src="${escapeAttr(logo)}" alt="Salong Maagia logo">
-          </button>
+          ${onVideo ? `<div aria-hidden="true"></div>` : `
+            <button class="ritali-header-logo editable-image" data-preview-page="home" ${editableAttrs({ key: "heroMediaLabel", kind: "image", pageId: "home", sectionId: getFirstSectionId(homePage || project.pages[0]) })} aria-label="Avaleht">
+              <img src="${escapeAttr(logo)}" alt="Salong Maagia logo">
+            </button>
+          `}
           <nav class="ritali-page-nav" aria-label="RitaLI lisalehed">
             ${navPages.map(item => `<button class="editable-text ${item.id === page.id ? "current" : ""}" data-preview-page="${item.id}" ${editableAttrs({ key: "pageTitle", pageId: item.id, sectionId: getFirstSectionId(item) })}>${escapeHtml(item.title)}</button>`).join("")}
           </nav>
@@ -4132,7 +4150,9 @@
           <video class="editable-image" ${editableAttrs({ key: "heroMediaUrl", kind: "image", pageId: page.id, sectionId: page.sections[0]?.id || "" })} src="${escapeAttr(hero.mediaUrl)}" autoplay muted loop playsinline poster="https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1600&q=82"></video>
           ${renderRitaLIHeader(project, page, true)}
           <div class="ritali-home-logo">
-            <img class="editable-image" ${editableAttrs({ key: "heroMediaLabel", kind: "image", pageId: page.id, sectionId: page.sections[0]?.id || "" })} src="${escapeAttr(hero.mediaLabel)}" alt="Salong Maagia logo">
+            <button class="ritali-home-logo-button editable-image" data-preview-page="home" ${editableAttrs({ key: "heroMediaLabel", kind: "image", pageId: page.id, sectionId: page.sections[0]?.id || "" })} aria-label="Avaleht">
+              <img src="${escapeAttr(hero.mediaLabel)}" alt="Salong Maagia logo">
+            </button>
           </div>
         </section>
       `;
