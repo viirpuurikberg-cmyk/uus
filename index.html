@@ -692,8 +692,8 @@
     }
 
     .ritali-header-logo {
-      width: clamp(220px, 20vw, 286px);
-      height: clamp(112px, 10vw, 150px);
+      width: 168px;
+      height: 76px;
       display: grid;
       place-items: center;
       pointer-events: auto;
@@ -710,12 +710,13 @@
       height: 100%;
       object-fit: contain;
       pointer-events: none;
+      transform: scale(1.18);
       filter: drop-shadow(0 8px 18px rgba(0,0,0,0.12));
     }
 
     .ritali-site-header.on-video .ritali-header-logo {
-      width: 144px;
-      height: 64px;
+      width: 168px;
+      height: 76px;
     }
 
     .ritali-site-header.on-video .ritali-header-logo img {
@@ -750,6 +751,15 @@
       transform: scaleX(0);
       transform-origin: center;
       transition: transform 180ms ease;
+    }
+
+    .ritali-page-nav .editable-text:hover,
+    .ritali-page-nav .editable-text:focus-visible,
+    .site-links .editable-text:hover,
+    .site-links .editable-text:focus-visible {
+      outline-color: transparent;
+      background: transparent;
+      box-shadow: none;
     }
 
     .ritali-page-nav button:hover::after,
@@ -1721,8 +1731,8 @@
       }
 
       .ritali-header-logo {
-        width: min(52vw, 240px);
-        height: 104px;
+        width: 138px;
+        height: 62px;
         justify-self: center;
       }
 
@@ -4114,7 +4124,7 @@
       return `
         <header class="ritali-site-header ${onVideo ? "on-video" : ""}">
           <div></div>
-          <button class="ritali-header-logo editable-image" data-preview-page="home" ${editableAttrs({ key: "heroMediaLabel", kind: "image", pageId: "home", sectionId: getFirstSectionId(homePage || project.pages[0]) })} aria-label="Avaleht">
+          <button class="ritali-header-logo" data-preview-page="home" aria-label="Avaleht">
             <img src="${escapeAttr(logo)}" alt="Salong Maagia logo">
           </button>
           <nav class="ritali-page-nav" aria-label="RitaLI lisalehed">
