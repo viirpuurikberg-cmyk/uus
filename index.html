@@ -356,6 +356,10 @@
       flex-wrap: wrap;
     }
 
+    .inline.compact {
+      gap: 8px;
+    }
+
     .pill {
       display: inline-flex;
       align-items: center;
@@ -3529,6 +3533,39 @@
       });
     }
 
+    async function optimizeImageFile(file) {
+      if (!file || !file.type?.startsWith("image/")) return fileToDataUrl(file);
+      if (file.type === "image/svg+xml") return fileToDataUrl(file);
+
+      const sourceUrl = await fileToDataUrl(file);
+      const image = await new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error("Image load failed"));
+        img.src = sourceUrl;
+      });
+
+      const maxDimension = 1600;
+      const scale = Math.min(1, maxDimension / Math.max(image.width || 1, image.height || 1));
+      const width = Math.max(1, Math.round(image.width * scale));
+      const height = Math.max(1, Math.round(image.height * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return sourceUrl;
+      ctx.drawImage(image, 0, 0, width, height);
+
+      const preferredType = file.type === "image/png" ? "image/webp" : "image/jpeg";
+      const preferredQuality = file.type === "image/png" ? 0.86 : 0.82;
+      let result = canvas.toDataURL(preferredType, preferredQuality);
+
+      if (result.length >= sourceUrl.length) {
+        result = sourceUrl;
+      }
+      return result;
+    }
+
     function keyMatchesPendingEditor(matchers) {
       if (!pendingEditorKey) return false;
       return matchers.some(matcher => pendingEditorKey === matcher || pendingEditorKey.startsWith(`${matcher}:`));
@@ -3827,6 +3864,13 @@
         `
       });
 
+      const renderImageActions = (key, label) => `
+        <div class="inline compact">
+          <div class="field" style="flex:1 1 240px"><label>${escapeHtml(label)}</label><input type="file" data-upload-key="${escapeAttr(key)}" accept="image/*"></div>
+          <button class="btn-ghost" type="button" data-clear-image="${escapeAttr(key)}">Eemalda pilt</button>
+        </div>
+      `;
+
       if (section.type === "hero") {
         const heroKey = panelGroupKey(stage, page.id, section.id, "hero");
         return `
@@ -3842,10 +3886,10 @@
               <div class="field"><label>Kirjeldus</label><textarea id="heroDescription" data-editor-key="heroDescription">${escapeHtml(page.content.hero.description)}</textarea></div>
               <div class="field"><label>CTA</label><input id="heroCta" data-editor-key="heroCta" value="${escapeAttr(page.content.hero.cta)}"></div>
               <div class="field"><label>Hero meedia URL</label><input id="heroMediaUrl" data-editor-key="heroMediaUrl" value="${escapeAttr(page.content.hero.mediaUrl || "")}" placeholder="https://..."></div>
-              <div class="field"><label>Laadi hero pilt üles</label><input type="file" data-upload-key="heroMediaUrl" accept="image/*"></div>
+              ${renderImageActions("heroMediaUrl", "Laadi hero pilt üles")}
               ${project.id === "ritali-ou" && page.id === "home" ? `
                 <div class="field"><label>Keskmise logo URL</label><input id="heroMediaLabel" data-editor-key="heroMediaLabel" value="${escapeAttr(page.content.hero.mediaLabel || "")}" placeholder="https://..."></div>
-                <div class="field"><label>Laadi logo üles</label><input type="file" data-upload-key="heroMediaLabel" accept="image/*"></div>
+                ${renderImageActions("heroMediaLabel", "Laadi logo üles")}
               ` : ""}
             `
           })}
@@ -3876,7 +3920,7 @@
                 <div class="field"><label>Card ${index + 1} hind</label><input data-editor-key="cardPrice:${index}" value="${escapeAttr(card.price || "")}" placeholder="Näiteks 49 €"></div>
                 <div class="field"><label>Card ${index + 1} tekst</label><textarea data-editor-key="cardText:${index}">${escapeHtml(card.text)}</textarea></div>
                 <div class="field"><label>Card ${index + 1} pildi URL</label><input data-editor-key="cardImage:${index}" value="${escapeAttr(card.image || "")}" placeholder="https://..."></div>
-                <div class="field"><label>Laadi card ${index + 1} pilt üles</label><input type="file" data-upload-key="cardImage:${index}" accept="image/*"></div>
+                ${renderImageActions(`cardImage:${index}`, `Laadi card ${index + 1} pilt üles`)}
               `
             });
           }).join("")}
@@ -3905,7 +3949,7 @@
                 <div class="field"><label>Gallery ${index + 1} pealkiri</label><input data-editor-key="galleryTitle:${index}" value="${escapeAttr(item.title)}"></div>
                 <div class="field"><label>Gallery ${index + 1} tekst</label><textarea data-editor-key="galleryText:${index}">${escapeHtml(item.text)}</textarea></div>
                 <div class="field"><label>Gallery ${index + 1} pildi URL</label><input data-editor-key="galleryImage:${index}" value="${escapeAttr(item.image || "")}" placeholder="https://..."></div>
-                <div class="field"><label>Laadi gallery ${index + 1} pilt üles</label><input type="file" data-upload-key="galleryImage:${index}" accept="image/*"></div>
+                ${renderImageActions(`galleryImage:${index}`, `Laadi gallery ${index + 1} pilt üles`)}
               `
             });
           }).join("")}
@@ -4521,7 +4565,7 @@
           const file = event.target.files?.[0];
           if (!file) return;
           const key = event.target.dataset.uploadKey;
-          const value = await fileToDataUrl(file);
+          const value = await optimizeImageFile(file);
           if (!setEditorValueByKey(page, section, key, value)) return;
           const pairedInput = [...els.panelBody.querySelectorAll("[data-editor-key]")].find(node => node.dataset.editorKey === key);
           if (pairedInput) pairedInput.value = value;
@@ -4530,6 +4574,22 @@
           pendingEditorKey = key;
           applyPendingEditorFocus();
           showToast("Meedia uuendatud");
+        });
+      });
+
+      els.panelBody.querySelectorAll("[data-clear-image]").forEach(button => {
+        button.addEventListener("click", () => {
+          const key = button.dataset.clearImage;
+          if (!setEditorValueByKey(page, section, key, "")) return;
+          const pairedInput = [...els.panelBody.querySelectorAll("[data-editor-key]")].find(node => node.dataset.editorKey === key);
+          if (pairedInput) pairedInput.value = "";
+          const uploader = [...els.panelBody.querySelectorAll("[data-upload-key]")].find(node => node.dataset.uploadKey === key);
+          if (uploader) uploader.value = "";
+          renderPreview();
+          autosave();
+          pendingEditorKey = key;
+          applyPendingEditorFocus();
+          showToast("Pilt eemaldatud");
         });
       });
     }
@@ -4829,22 +4889,31 @@
 
     async function saveProjectToCloud() {
       const project = getProject();
+      if (window.location.protocol === "file:") {
+        state.cloudAvailable = false;
+        saveState(false);
+        renderTopbar();
+        renderPanel();
+        showToast("Pilvesalvestus töötab ainult deployitud versioonis, mitte file:// failina.");
+        return;
+      }
       try {
+        const payload = {
+          site: {
+            id: project.id,
+            name: project.name,
+            domain: project.domain,
+            status: project.status,
+            industryId: project.blueprintId,
+            designTemplateId: project.designTemplateId,
+            clientAccess: project.clientAccess,
+            ...project
+          }
+        };
         const response = await fetch("/api/projects", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            site: {
-              id: project.id,
-              name: project.name,
-              domain: project.domain,
-              status: project.status,
-              industryId: project.blueprintId,
-              designTemplateId: project.designTemplateId,
-              clientAccess: project.clientAccess,
-              ...project
-            }
-          })
+          body: JSON.stringify(payload)
         });
         if (!response.ok) throw new Error(await response.text());
         state.cloudAvailable = true;
@@ -4858,12 +4927,14 @@
         saveState(false);
         renderTopbar();
         renderPanel();
-        showToast("Pilvesalvestus ebaõnnestus");
+        console.error("Cloud save failed", error);
+        const message = String(error?.message || error || "");
+        showToast(message ? `Pilvesalvestus ebaõnnestus: ${message.slice(0, 80)}` : "Pilvesalvestus ebaõnnestus");
       }
     }
 
     async function hydrateProjectsFromCloud() {
-      if (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost") {
+      if (window.location.protocol === "file:" || window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost") {
         state.cloudAvailable = false;
         return;
       }
