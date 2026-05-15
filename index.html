@@ -50,6 +50,90 @@
 
     .hidden { display: none !important; }
 
+    body.locked {
+      overflow: hidden;
+    }
+
+    body.locked .app,
+    body.locked .toast,
+    body.locked .trailer-modal {
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .access-lock {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: none;
+      place-items: center;
+      padding: 24px;
+      background:
+        radial-gradient(circle at top, rgba(0, 91, 211, 0.16), transparent 34%),
+        linear-gradient(180deg, #f7f9fc 0%, #eef2f7 100%);
+    }
+
+    body.locked .access-lock {
+      display: grid;
+    }
+
+    .access-lock-card {
+      width: min(100%, 420px);
+      background: rgba(255,255,255,0.94);
+      border: 1px solid rgba(221, 225, 230, 0.9);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      padding: 28px;
+      display: grid;
+      gap: 18px;
+      text-align: center;
+    }
+
+    .access-lock-mark {
+      width: 56px;
+      height: 56px;
+      margin: 0 auto;
+      border-radius: 18px;
+      background: linear-gradient(135deg, #0f172a, #005bd3);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      box-shadow: 0 12px 32px rgba(0, 91, 211, 0.24);
+    }
+
+    .access-lock-copy {
+      display: grid;
+      gap: 8px;
+    }
+
+    .access-lock-copy h1 {
+      margin: 0;
+      font-size: clamp(26px, 3vw, 34px);
+      line-height: 1.05;
+    }
+
+    .access-lock-copy p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .access-lock-form {
+      display: grid;
+      gap: 12px;
+      text-align: left;
+    }
+
+    .access-lock-error {
+      min-height: 20px;
+      color: var(--danger);
+      font-size: 13px;
+      font-weight: 700;
+      text-align: center;
+    }
+
     .app {
       min-height: 100vh;
       display: grid;
@@ -1891,7 +1975,25 @@
     }
   </style>
 </head>
-<body>
+<body class="locked">
+  <div class="access-lock" id="accessLock" role="dialog" aria-modal="true" aria-labelledby="accessLockTitle">
+    <div class="access-lock-card">
+      <div class="access-lock-mark">WB</div>
+      <div class="access-lock-copy">
+        <h1 id="accessLockTitle">Sisesta ligipääsukood</h1>
+        <p>See leht avaneb ainult õige koodiga.</p>
+      </div>
+      <form class="access-lock-form" id="accessLockForm">
+        <div class="field">
+          <label for="accessCodeInput">Ligipääsukood</label>
+          <input id="accessCodeInput" type="password" autocomplete="current-password" placeholder="Sisesta kood">
+        </div>
+        <button class="btn-primary" type="submit">Ava leht</button>
+      </form>
+      <div class="access-lock-error" id="accessLockError" aria-live="polite"></div>
+    </div>
+  </div>
+
   <div class="app">
     <header class="topbar">
       <div class="topbar-left">
@@ -1977,6 +2079,8 @@
 
   <script>
     const appRoot = document.querySelector(".app");
+    const ACCESS_CODE = "miljonbiljon";
+    const ACCESS_STORAGE_KEY = "website_builder_access_v1";
     const STORAGE_KEY = "website_builder_v7";
     const STAGES = [
       { id: "generate", label: "Alustus", icon: "✦" },
@@ -2146,6 +2250,10 @@
     const EMPTY_IMAGE = "";
 
     const els = {
+      accessLock: document.querySelector("#accessLock"),
+      accessLockForm: document.querySelector("#accessLockForm"),
+      accessCodeInput: document.querySelector("#accessCodeInput"),
+      accessLockError: document.querySelector("#accessLockError"),
       saveBtn: document.querySelector("#saveBtn"),
       exportBtn: document.querySelector("#exportBtn"),
       trailerBtn: document.querySelector("#trailerBtn"),
@@ -2195,8 +2303,57 @@
     let trailerFrame = 0;
     let trailerBlobUrl = "";
     let pendingEditorKey = "";
+    let hasInitialized = false;
 
-    init();
+    boot();
+
+    function boot() {
+      bindAccessLock();
+      if (isAccessUnlocked()) {
+        unlockAccess({ persist: false });
+      } else {
+        lockAccess();
+      }
+    }
+
+    function bindAccessLock() {
+      els.accessLockForm?.addEventListener("submit", event => {
+        event.preventDefault();
+        const value = String(els.accessCodeInput?.value || "").trim();
+        if (value === ACCESS_CODE) {
+          unlockAccess();
+          return;
+        }
+        showAccessError("Vale kood");
+      });
+    }
+
+    function isAccessUnlocked() {
+      return localStorage.getItem(ACCESS_STORAGE_KEY) === "ok";
+    }
+
+    function lockAccess() {
+      document.body.classList.add("locked");
+      if (els.accessCodeInput) {
+        els.accessCodeInput.value = "";
+        window.setTimeout(() => els.accessCodeInput?.focus(), 0);
+      }
+      showAccessError("");
+    }
+
+    function showAccessError(message) {
+      if (els.accessLockError) els.accessLockError.textContent = message;
+    }
+
+    async function unlockAccess({ persist = true } = {}) {
+      if (persist) localStorage.setItem(ACCESS_STORAGE_KEY, "ok");
+      document.body.classList.remove("locked");
+      showAccessError("");
+      if (!hasInitialized) {
+        hasInitialized = true;
+        await init();
+      }
+    }
 
     async function init() {
       render();
