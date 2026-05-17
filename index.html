@@ -2104,6 +2104,7 @@
         </div>
       </div>
       <div class="topbar-right">
+        <button id="backToProjectsBtn" class="btn">Projektid</button>
         <button id="previewModeBtn" class="btn-ghost">Eelvaade</button>
         <button id="trailerBtn" class="btn">Treiler</button>
         <button id="exportBtn" class="btn">Ekspordi HTML</button>
@@ -2361,6 +2362,7 @@
       trailerCanvas: document.querySelector("#trailerCanvas"),
       trailerVideo: document.querySelector("#trailerVideo"),
       trailerSubtitle: document.querySelector("#trailerSubtitle"),
+      backToProjectsBtn: document.querySelector("#backToProjectsBtn"),
       previewModeBtn: document.querySelector("#previewModeBtn"),
       saveIndicator: document.querySelector("#saveIndicator"),
       projectChipName: document.querySelector("#projectChipName"),
@@ -4093,6 +4095,18 @@
         setActiveProject(event.target.value);
       });
 
+      els.backToProjectsBtn?.addEventListener("click", () => {
+        if (isClientMode() || isLiveMode()) {
+          const adminUrl = getAdminBuilderUrl();
+          if (adminUrl) window.location.href = adminUrl;
+          return;
+        }
+        state.activeStage = "generate";
+        renderPanel();
+        renderTopbar();
+        saveState();
+      });
+
       els.saveBtn.addEventListener("click", async () => {
         if (isClientMode()) {
           await publishProjectLive();
@@ -4183,9 +4197,11 @@
       els.saveIndicator.textContent = isLiveMode()
         ? (project.livePublishedAt ? `Live ${formatPublishedAt(project.livePublishedAt)}` : "Live vaade")
         : state.lastSavedAt ? `Salvestatud ${state.lastSavedAt}` : "Automaatsalvestus aktiivne";
+      els.backToProjectsBtn.textContent = isClientMode() || isLiveMode() ? "Admin" : "Projektid";
       els.previewModeBtn.textContent = state.previewMode ? "Tagasi redaktorisse" : "Eelvaade";
       els.saveBtn.textContent = isClientMode() ? "LIVE" : "Salvesta";
       els.topbarProjectSwitch?.classList.toggle("hidden", isClientMode() || isLiveMode());
+      els.backToProjectsBtn.classList.toggle("hidden", !isClientMode() && !isLiveMode() && state.activeStage === "generate");
       els.previewModeBtn.classList.toggle("hidden", isLiveMode());
       els.trailerBtn.classList.toggle("hidden", isClientMode() || isLiveMode());
       els.exportBtn.classList.toggle("hidden", isClientMode() || isLiveMode());
