@@ -177,6 +177,222 @@
       display: none;
     }
 
+    .app.dashboard-mode {
+      background:
+        radial-gradient(circle at top left, rgba(37, 99, 235, 0.18), transparent 24%),
+        radial-gradient(circle at top right, rgba(16, 185, 129, 0.12), transparent 22%),
+        linear-gradient(180deg, #05070d 0%, #0a0e17 100%);
+    }
+
+    .app.dashboard-mode .topbar {
+      background: rgba(7, 10, 17, 0.9);
+      border-bottom-color: rgba(148, 163, 184, 0.16);
+      color: #f8fafc;
+    }
+
+    .app.dashboard-mode .brand-copy span,
+    .app.dashboard-mode .save-indicator,
+    .app.dashboard-mode .project-chip span,
+    .app.dashboard-mode .project-switch-label {
+      color: #93a4bd;
+    }
+
+    .app.dashboard-mode .project-chip,
+    .app.dashboard-mode .project-switch {
+      border-color: rgba(148, 163, 184, 0.16);
+    }
+
+    .app.dashboard-mode .top-select,
+    .app.dashboard-mode .field input,
+    .app.dashboard-mode .field textarea,
+    .app.dashboard-mode .field select {
+      background: rgba(15, 23, 42, 0.72);
+      border-color: rgba(148, 163, 184, 0.18);
+      color: #f8fafc;
+    }
+
+    .app.dashboard-mode .btn,
+    .app.dashboard-mode .btn-ghost {
+      background: rgba(15, 23, 42, 0.72);
+      border-color: rgba(148, 163, 184, 0.18);
+      color: #f8fafc;
+    }
+
+    .app.dashboard-mode .btn-primary {
+      background: #2563eb;
+      border-color: #2563eb;
+      color: #fff;
+    }
+
+    .app.dashboard-mode .workspace {
+      grid-template-columns: 1fr;
+      min-height: calc(100vh - var(--topbar-h));
+    }
+
+    .app.dashboard-mode .panel {
+      background: transparent;
+      border-right: 0;
+      color: #f8fafc;
+      overflow: visible;
+    }
+
+    .app.dashboard-mode .panel-head {
+      position: static;
+      background: transparent;
+      border-bottom-color: rgba(148, 163, 184, 0.14);
+      padding: 28px 24px 16px;
+    }
+
+    .app.dashboard-mode .panel-head p {
+      color: #93a4bd;
+      max-width: 720px;
+    }
+
+    .app.dashboard-mode .panel-body {
+      padding: 20px 24px 40px;
+      gap: 18px;
+    }
+
+    .app.dashboard-mode .preview-area {
+      display: none;
+    }
+
+    .dashboard-shell {
+      display: grid;
+      gap: 18px;
+    }
+
+    .dashboard-summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .dashboard-stat {
+      background: rgba(15, 23, 42, 0.78);
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: none;
+    }
+
+    .dashboard-stat span {
+      display: block;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #93a4bd;
+      margin-bottom: 10px;
+    }
+
+    .dashboard-stat strong {
+      font-size: 28px;
+      line-height: 1;
+      color: #f8fafc;
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .dashboard-card {
+      background: rgba(15, 23, 42, 0.78);
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      border-radius: 24px;
+      padding: 20px;
+      box-shadow: none;
+    }
+
+    .dashboard-card h3 {
+      margin: 0 0 10px;
+      font-size: 18px;
+      color: #f8fafc;
+    }
+
+    .dashboard-card p,
+    .dashboard-card .compact-note {
+      color: #93a4bd;
+    }
+
+    .dashboard-projects {
+      display: grid;
+      gap: 14px;
+    }
+
+    .project-admin-card {
+      background: rgba(9, 13, 22, 0.86);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+      border-radius: 20px;
+      padding: 18px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .project-admin-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .project-admin-head strong {
+      display: block;
+      font-size: 18px;
+      color: #f8fafc;
+      margin-bottom: 4px;
+    }
+
+    .project-admin-head span,
+    .project-admin-meta,
+    .project-admin-card .helper {
+      color: #93a4bd;
+    }
+
+    .project-admin-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 30px;
+      padding: 0 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: rgba(37, 99, 235, 0.16);
+      color: #bfdbfe;
+      border: 1px solid rgba(96, 165, 250, 0.18);
+    }
+
+    .project-admin-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: 13px;
+    }
+
+    .project-admin-actions,
+    .project-admin-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .project-admin-fields {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .project-admin-fields .field:last-child,
+    .project-admin-fields .field:nth-last-child(2):nth-child(odd) {
+      grid-column: span 2;
+    }
+
     .topbar {
       position: sticky;
       top: 0;
@@ -2036,6 +2252,16 @@
         display: none;
       }
 
+      .app.dashboard-mode .panel {
+        display: block;
+      }
+
+      .app.dashboard-mode .panel-head,
+      .app.dashboard-mode .panel-body {
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+
       .project-chip {
         border-left: 0;
         padding-left: 0;
@@ -2051,6 +2277,12 @@
       .stage-nav {
         overflow-x: auto;
         padding-bottom: 2px;
+      }
+
+      .dashboard-summary,
+      .dashboard-grid,
+      .project-admin-fields {
+        grid-template-columns: 1fr;
       }
     }
   </style>
@@ -2408,12 +2640,12 @@
     boot();
 
     function boot() {
+      bindAccessLock();
       if (isClientMode() || isLiveMode()) {
         hasInitialized = true;
         init();
         return;
       }
-      bindAccessLock();
       if (isAccessUnlocked()) {
         unlockAccess({ persist: false });
       } else {
@@ -3739,6 +3971,10 @@
       return Boolean(ROUTE_MODE.liveProjectId);
     }
 
+    function isDashboardMode() {
+      return !isClientMode() && !isLiveMode() && state.activeStage === "generate";
+    }
+
     function getRequestedProjectId() {
       return ROUTE_MODE.liveProjectId || ROUTE_MODE.clientProjectId || "";
     }
@@ -4182,6 +4418,7 @@
       appRoot.classList.toggle("preview-mode", state.previewMode);
       appRoot.classList.toggle("route-client", isClientMode());
       appRoot.classList.toggle("route-live", isLiveMode());
+      appRoot.classList.toggle("dashboard-mode", isDashboardMode());
       els.projectChipName.textContent = project.name;
       els.projectChipMeta.textContent = locationParts.join(" · ");
       if (els.topbarProjectSelect) {
@@ -4202,10 +4439,10 @@
       els.saveBtn.textContent = isClientMode() ? "LIVE" : "Salvesta";
       els.topbarProjectSwitch?.classList.toggle("hidden", isClientMode() || isLiveMode());
       els.backToProjectsBtn.classList.toggle("hidden", !isClientMode() && !isLiveMode() && state.activeStage === "generate");
-      els.previewModeBtn.classList.toggle("hidden", isLiveMode());
-      els.trailerBtn.classList.toggle("hidden", isClientMode() || isLiveMode());
-      els.exportBtn.classList.toggle("hidden", isClientMode() || isLiveMode());
-      els.saveBtn.classList.toggle("hidden", isLiveMode());
+      els.previewModeBtn.classList.toggle("hidden", isLiveMode() || isDashboardMode());
+      els.trailerBtn.classList.toggle("hidden", isClientMode() || isLiveMode() || isDashboardMode());
+      els.exportBtn.classList.toggle("hidden", isClientMode() || isLiveMode() || isDashboardMode());
+      els.saveBtn.classList.toggle("hidden", isLiveMode() || isDashboardMode());
       document.querySelectorAll("[data-device]").forEach(button => {
         button.classList.toggle("active", button.dataset.device === state.device);
       });
@@ -4293,77 +4530,124 @@
 
     function renderGeneratePanel(project, blueprint) {
       const adminUrl = getAdminBuilderUrl();
+      const totalProjects = state.projects.length;
+      const liveProjects = state.projects.filter(item => item.livePublishedAt).length;
+      const memberEnabledCount = state.projects.filter(item => item.clientAccess?.enabled).length;
+      const memberReadyCount = state.projects.filter(item => projectHasClientAccess(item)).length;
       return `
-        <div class="settings-card stack">
-          <h3>Alusta uus leht</h3>
-          <div class="field">
-            <label>Projekti nimi</label>
-            <input id="newProjectName" placeholder="Nt RitaLI OÜ">
+        <div class="dashboard-shell">
+          <div class="dashboard-summary">
+            <div class="dashboard-stat">
+              <span>Projektid</span>
+              <strong>${totalProjects}</strong>
+            </div>
+            <div class="dashboard-stat">
+              <span>Live'is</span>
+              <strong>${liveProjects}</strong>
+            </div>
+            <div class="dashboard-stat">
+              <span>Ligipääs sees</span>
+              <strong>${memberEnabledCount}</strong>
+            </div>
+            <div class="dashboard-stat">
+              <span>Link + parool valmis</span>
+              <strong>${memberReadyCount}</strong>
+            </div>
           </div>
-          <div class="field">
-            <label>Veebilehe URL</label>
-            <input id="newProjectWebsite" placeholder="https://ettevote.ee">
-          </div>
-          <div class="field">
-            <label>Facebooki URL</label>
-            <input id="newProjectFacebook" placeholder="https://facebook.com/ettevote">
-          </div>
-          <div class="field">
-            <label>Märkmed</label>
-            <textarea id="newProjectInstructions" placeholder="Mida selle lehega vaja on? Näiteks teenused, pood, broneerimine, kontaktid, toon jne."></textarea>
-          </div>
-          <div class="inline">
-            <button id="createProjectBtn" class="btn-primary">Alusta uus leht</button>
-          </div>
-          <p class="compact-note">Uus projekt tekib siia admin builderisse. Liikme lingi ja parooli saad hiljem valitud projekti alt.</p>
-        </div>
 
-        <div class="settings-card stack">
-          <h3>Vali pooleliolev</h3>
-          <div class="tree-group">
-            ${state.projects.map(item => `
-              <div class="tree-item ${item.id === project.id ? "active" : ""}">
-                <div class="tree-item-row">
-                  <button class="page-link" data-open-project="${item.id}">
-                    <strong>${escapeHtml(item.name)}</strong>
-                    <span>${escapeHtml(getBlueprint(item).label)} · ${escapeHtml(item.status)}${item.livePublishedAt ? ` · live ${escapeHtml(formatPublishedAt(item.livePublishedAt))}` : ""}</span>
-                  </button>
-                  <div class="item-actions">
-                    <button class="mini-btn" data-copy-member-link="${item.id}" ${projectHasClientAccess(item) ? "" : "disabled"}>Liige</button>
-                    <button class="mini-btn" data-copy-live-link="${item.id}" ${getLiveSiteUrl(item) ? "" : "disabled"}>Live</button>
-                  </div>
-                </div>
+          <div class="dashboard-grid">
+            <div class="dashboard-card stack">
+              <h3>Alusta uus leht</h3>
+              <div class="field">
+                <label>Projekti nimi</label>
+                <input id="newProjectName" placeholder="Nt RitaLI OÜ">
               </div>
-            `).join("")}
-          </div>
-          <div class="field">
-            <label>Admin URL</label>
-            <input value="${escapeAttr(adminUrl || "Admin URL tekib deployitud versioonis")}" readonly>
-          </div>
-          <p class="compact-note">Praegune deployitud URL on admin. Iga projekti liikme link tekib eraldi ja avaneb parooliga.</p>
-        </div>
+              <div class="field">
+                <label>Veebilehe URL</label>
+                <input id="newProjectWebsite" placeholder="https://ettevote.ee">
+              </div>
+              <div class="field">
+                <label>Facebooki URL</label>
+                <input id="newProjectFacebook" placeholder="https://facebook.com/ettevote">
+              </div>
+              <div class="field">
+                <label>Märkmed</label>
+                <textarea id="newProjectInstructions" placeholder="Mida selle lehega vaja on? Näiteks teenused, pood, broneerimine, kontaktid, toon jne."></textarea>
+              </div>
+              <div class="inline">
+                <button id="createProjectBtn" class="btn-primary">Loo uus projekt</button>
+              </div>
+              <div class="field">
+                <label>Admin URL</label>
+                <input value="${escapeAttr(adminUrl || "Admin URL tekib deployitud versioonis")}" readonly>
+              </div>
+              <p class="compact-note">See URL jääb teile. Liikmele saadetakse alati projekti enda link koos parooliga.</p>
+            </div>
 
-        <div class="settings-card stack">
-          <h3>Valitud projekti allikad</h3>
-          <div class="field">
-            <label>Veebilehe URL</label>
-            <input id="sourceWebsite" value="${escapeAttr(project.source.websiteUrl)}" placeholder="https://ettevote.ee">
-          </div>
-          <div class="field">
-            <label>Facebooki URL</label>
-            <input id="sourceFacebook" value="${escapeAttr(project.source.facebookUrl)}" placeholder="https://facebook.com/ettevote">
-          </div>
-          <div class="field">
-            <label>Märkmed</label>
-            <textarea id="sourceInstructions" placeholder="Kirjuta siia, mida ehitaja peab rõhutama: millised lehed, milline toon, kas fookus on broneerimisel, toodetel, menüül, paketil, kontaktidel jne.">${escapeHtml(project.source.instructions)}</textarea>
-          </div>
-          <div class="inline">
-            <button id="generateBtn" class="btn-primary">Koonda info ja uuenda starterit</button>
-            <button id="starterResetBtn" class="btn-ghost">Lähtesta starter</button>
-          </div>
-          <p class="compact-note">${escapeHtml(project.source.lastResult || "Vali pooleliolev projekt või loo uus. Kui lisad URL-i, saab builder sellest esimese starteri kokku panna.")}</p>
-          <div class="inline">
-            ${blueprint.pages.map(page => `<span class="pill">${escapeHtml(page.title)}</span>`).join("")}
+            <div class="dashboard-card stack">
+              <h3>Projektid ja ligipääsud</h3>
+              <div class="dashboard-projects">
+                ${state.projects.map(item => {
+                  const memberUrl = getClientEditorUrl(item);
+                  const liveUrl = getLiveSiteUrl(item);
+                  return `
+                    <div class="project-admin-card ${item.id === project.id ? "active" : ""}">
+                      <div class="project-admin-head">
+                        <div>
+                          <strong>${escapeHtml(item.name)}</strong>
+                          <span>${escapeHtml(getBlueprint(item).label)} · ${escapeHtml(item.domain)} · ${escapeHtml(item.status)}</span>
+                        </div>
+                        <span class="project-admin-pill">${item.livePublishedAt ? "Live olemas" : "Mustand"}</span>
+                      </div>
+                      <div class="project-admin-meta">
+                        <span>Viimane live: ${escapeHtml(item.livePublishedAt ? formatPublishedAt(item.livePublishedAt) : "Veel mitte")}</span>
+                        <span>Lehti: ${item.pages.length}</span>
+                        <span>Ligipääs: ${item.clientAccess?.enabled ? "Sees" : "Väljas"}</span>
+                      </div>
+                      <div class="project-admin-fields">
+                        <div class="field">
+                          <label>Liikme nimi</label>
+                          <input data-project-member-name="${item.id}" value="${escapeAttr(item.clientAccess?.clientName || "")}" placeholder="Kliendi või liikme nimi">
+                        </div>
+                        <div class="field">
+                          <label>Liikme e-post</label>
+                          <input data-project-member-email="${item.id}" value="${escapeAttr(item.clientAccess?.clientEmail || "")}" placeholder="nimi@ettevote.ee">
+                        </div>
+                        <div class="field">
+                          <label>Liikme parool</label>
+                          <input data-project-member-password="${item.id}" value="${escapeAttr(item.clientAccess?.password || "")}" placeholder="Sisesta projekti parool">
+                        </div>
+                        <div class="field">
+                          <label>Liikmelink</label>
+                          <input value="${escapeAttr(memberUrl || "Lülita ligipääs sisse ja lisa parool")}" readonly>
+                        </div>
+                      </div>
+                      <label class="mini-check">
+                        <input data-project-member-enabled="${item.id}" type="checkbox" ${item.clientAccess?.enabled ? "checked" : ""}>
+                        <span>Liikmevaade aktiivne</span>
+                      </label>
+                      <div class="project-admin-actions">
+                        <button class="btn-primary" data-open-project-editor="${item.id}">Ava redaktor</button>
+                        <button class="btn" data-open-project-publish="${item.id}">Ava ligipääsud</button>
+                        <button class="btn" data-generate-project="${item.id}">Uuenda starterit</button>
+                        <button class="btn" data-save-project-access="${item.id}">Salvesta ligipääs</button>
+                      </div>
+                      <div class="project-admin-links">
+                        <button class="btn-ghost" data-open-member-link="${item.id}" ${projectHasClientAccess(item) ? "" : "disabled"}>Ava liikmevaade</button>
+                        <button class="btn-ghost" data-copy-member-link="${item.id}" ${projectHasClientAccess(item) ? "" : "disabled"}>Kopeeri liikmelink</button>
+                        <button class="btn-ghost" data-copy-member-bundle="${item.id}" ${projectHasClientAccess(item) ? "" : "disabled"}>Kopeeri link + parool</button>
+                        <button class="btn-ghost" data-reset-member-password="${item.id}">Uus parool</button>
+                        <button class="btn-ghost" data-open-live-link="${item.id}" ${liveUrl ? "" : "disabled"}>Ava live</button>
+                      </div>
+                      <div class="helper">${escapeHtml(item.source?.lastResult || "Projekt valmis haldamiseks. Ava redaktor, et sisu või kujundust muuta.")}</div>
+                    </div>
+                  `;
+                }).join("")}
+              </div>
+              <div class="inline">
+                ${blueprint.pages.map(page => `<span class="pill">${escapeHtml(page.title)}</span>`).join("")}
+              </div>
+            </div>
           </div>
         </div>
       `;
@@ -5076,8 +5360,7 @@
     }
 
     function bindGeneratePanel() {
-      const project = getProject();
-      document.querySelector("#createProjectBtn")?.addEventListener("click", () => {
+      document.querySelector("#createProjectBtn")?.addEventListener("click", async () => {
         const name = String(document.querySelector("#newProjectName")?.value || "").trim();
         if (!name) {
           showToast("Pane uuele projektile nimi");
@@ -5098,12 +5381,24 @@
         state.activeSectionId = nextProject.pages[0].sections[0].id;
         render();
         saveState();
-        showToast("Uus projekt loodud");
+        await saveProjectToCloud({ project: nextProject, toastMessage: "Uus projekt loodud" });
       });
 
-      document.querySelectorAll("[data-open-project]").forEach(node => {
+      document.querySelectorAll("[data-open-project-editor]").forEach(node => {
         node.addEventListener("click", () => {
-          setActiveProject(node.dataset.openProject);
+          setActiveProject(node.dataset.openProjectEditor);
+          state.activeStage = "content";
+          render();
+          saveState();
+        });
+      });
+
+      document.querySelectorAll("[data-open-project-publish]").forEach(node => {
+        node.addEventListener("click", () => {
+          setActiveProject(node.dataset.openProjectPublish);
+          state.activeStage = "publish";
+          render();
+          saveState();
         });
       });
 
@@ -5120,6 +5415,32 @@
         });
       });
 
+      document.querySelectorAll("[data-open-member-link]").forEach(node => {
+        node.addEventListener("click", () => {
+          const nextProject = state.projects.find(item => item.id === node.dataset.openMemberLink);
+          const url = getClientEditorUrl(nextProject);
+          if (!url) {
+            showToast("Liikmevaade vajab aktiivset parooli ja deployitud versiooni");
+            return;
+          }
+          window.open(url, "_blank", "noopener,noreferrer");
+        });
+      });
+
+      document.querySelectorAll("[data-copy-member-bundle]").forEach(node => {
+        node.addEventListener("click", async () => {
+          const nextProject = state.projects.find(item => item.id === node.dataset.copyMemberBundle);
+          const url = getClientEditorUrl(nextProject);
+          const password = String(nextProject?.clientAccess?.password || "").trim();
+          if (!url || !password) {
+            showToast("Lisa enne projektilink ja parool");
+            return;
+          }
+          await copyText(`Liikmelink: ${url}\nParool: ${password}`);
+          showToast("Liikme ligipääs kopeeritud");
+        });
+      });
+
       document.querySelectorAll("[data-copy-live-link]").forEach(node => {
         node.addEventListener("click", async () => {
           const nextProject = state.projects.find(item => item.id === node.dataset.copyLiveLink);
@@ -5133,24 +5454,82 @@
         });
       });
 
-      const bindValue = (selector, key) => {
-        const node = document.querySelector(selector);
-        node?.addEventListener("input", event => {
-          project.source[key] = event.target.value;
-          autosave();
+      document.querySelectorAll("[data-open-live-link]").forEach(node => {
+        node.addEventListener("click", () => {
+          const nextProject = state.projects.find(item => item.id === node.dataset.openLiveLink);
+          const url = getLiveSiteUrl(nextProject);
+          if (!url) {
+            showToast("Live-link pole veel saadaval");
+            return;
+          }
+          window.open(url, "_blank", "noopener,noreferrer");
         });
-      };
-      bindValue("#sourceWebsite", "websiteUrl");
-      bindValue("#sourceFacebook", "facebookUrl");
-      bindValue("#sourceInstructions", "instructions");
-
-      document.querySelector("#generateBtn")?.addEventListener("click", async () => {
-        await generateStarter();
       });
 
-      document.querySelector("#starterResetBtn")?.addEventListener("click", () => {
-        if (!confirm("Kas lähtestame selle projekti starteri algseisu peale?")) return;
-        resetProjectToBlueprint(project.blueprintId);
+      document.querySelectorAll("[data-generate-project]").forEach(node => {
+        node.addEventListener("click", async () => {
+          setActiveProject(node.dataset.generateProject);
+          await generateStarter();
+          state.activeStage = "generate";
+          render();
+          saveState();
+        });
+      });
+
+      document.querySelectorAll("[data-save-project-access]").forEach(node => {
+        node.addEventListener("click", async () => {
+          const nextProject = state.projects.find(item => item.id === node.dataset.saveProjectAccess);
+          if (!nextProject) return;
+          await saveProjectToCloud({ project: nextProject, toastMessage: `${nextProject.name} ligipääs salvestatud` });
+          renderPanel();
+        });
+      });
+
+      const bindProjectValue = (selector, accessPath) => {
+        document.querySelectorAll(selector).forEach(node => {
+          node.addEventListener("input", event => {
+            const nextProject = state.projects.find(item => item.id === node.dataset[accessPath]);
+            if (!nextProject) return;
+            const value = event.target.value;
+            if (accessPath === "projectMemberName") nextProject.clientAccess.clientName = value;
+            if (accessPath === "projectMemberEmail") nextProject.clientAccess.clientEmail = value;
+            if (accessPath === "projectMemberPassword") {
+              nextProject.clientAccess.password = value;
+              clearMemberAccess(nextProject.id);
+            }
+            autosave();
+          });
+        });
+      };
+
+      bindProjectValue("[data-project-member-name]", "projectMemberName");
+      bindProjectValue("[data-project-member-email]", "projectMemberEmail");
+      bindProjectValue("[data-project-member-password]", "projectMemberPassword");
+
+      document.querySelectorAll("[data-project-member-enabled]").forEach(node => {
+        node.addEventListener("change", event => {
+          const nextProject = state.projects.find(item => item.id === node.dataset.projectMemberEnabled);
+          if (!nextProject) return;
+          nextProject.clientAccess.enabled = Boolean(event.target.checked);
+          if (nextProject.clientAccess.enabled && !String(nextProject.clientAccess.password || "").trim()) {
+            nextProject.clientAccess.password = createMemberPassword();
+          }
+          autosave();
+          renderPanel();
+        });
+      });
+
+      document.querySelectorAll("[data-reset-member-password]").forEach(node => {
+        node.addEventListener("click", () => {
+          const nextProject = state.projects.find(item => item.id === node.dataset.resetMemberPassword);
+          if (!nextProject) return;
+          nextProject.clientAccess.password = createMemberPassword();
+          if (!nextProject.clientAccess.enabled) nextProject.clientAccess.enabled = true;
+          clearMemberAccess(nextProject.id);
+          autosave();
+          renderPanel();
+          showToast("Uus parool loodud");
+        });
       });
     }
 
@@ -5624,7 +6003,7 @@
     }
 
     async function saveProjectToCloud(options = {}) {
-      const project = getProject();
+      const project = options.project || getProject();
       const { toastMessage = "Pilve salvestatud" } = options;
       if (window.location.protocol === "file:") {
         state.cloudAvailable = false;
