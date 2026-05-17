@@ -140,6 +140,43 @@
       grid-template-rows: var(--topbar-h) 1fr;
     }
 
+    .app.route-live {
+      grid-template-rows: 1fr;
+    }
+
+    .app.route-live .topbar,
+    .app.route-live .panel,
+    .app.route-live .preview-top {
+      display: none;
+    }
+
+    .app.route-live .workspace {
+      grid-template-columns: 1fr;
+    }
+
+    .app.route-live .preview-area {
+      padding: 0;
+      min-height: 100vh;
+    }
+
+    .app.route-live .preview-frame {
+      border: 0;
+      border-radius: 0;
+      min-height: 100vh;
+      box-shadow: none;
+      background: transparent;
+    }
+
+    .app.route-live .site-shell {
+      min-height: 100vh;
+      border-radius: 0;
+    }
+
+    .app.route-client #exportBtn,
+    .app.route-client #trailerBtn {
+      display: none;
+    }
+
     .topbar {
       position: sticky;
       top: 0;
@@ -439,6 +476,21 @@
       min-height: 110px;
       resize: vertical;
       line-height: 1.45;
+    }
+
+    .mini-check {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .mini-check input {
+      width: 16px;
+      height: 16px;
+      margin: 0;
     }
 
     .stack {
@@ -2082,6 +2134,13 @@
     const ACCESS_CODE = "miljonbiljon";
     const ACCESS_STORAGE_KEY = "website_builder_access_v1";
     const STORAGE_KEY = "website_builder_v7";
+    const routeParams = new URLSearchParams(window.location.search);
+    const ROUTE_MODE = {
+      clientProjectId: routeParams.get("client") || "",
+      clientToken: routeParams.get("token") || "",
+      liveProjectId: routeParams.get("live") || ""
+    };
+    const CLIENT_VISIBLE_STAGES = ["content", "publish"];
     const STAGES = [
       { id: "generate", label: "Alustus", icon: "✦" },
       { id: "structure", label: "Lehed", icon: "▣" },
@@ -2251,6 +2310,8 @@
 
     const els = {
       accessLock: document.querySelector("#accessLock"),
+      accessLockTitle: document.querySelector("#accessLockTitle"),
+      accessLockCopy: document.querySelector(".access-lock-copy p"),
       accessLockForm: document.querySelector("#accessLockForm"),
       accessCodeInput: document.querySelector("#accessCodeInput"),
       accessLockError: document.querySelector("#accessLockError"),
@@ -2308,6 +2369,14 @@
     boot();
 
     function boot() {
+      if (isClientMode() || isLiveMode()) {
+        appRoot.classList.toggle("route-client", isClientMode());
+        appRoot.classList.toggle("route-live", isLiveMode());
+        document.body.classList.remove("locked");
+        hasInitialized = true;
+        init();
+        return;
+      }
       bindAccessLock();
       if (isAccessUnlocked()) {
         unlockAccess({ persist: false });
@@ -2332,13 +2401,20 @@
       return localStorage.getItem(ACCESS_STORAGE_KEY) === "ok";
     }
 
+    function setAccessLockState({ title = "Sisesta ligipääsukood", text = "See leht avaneb ainult õige koodiga.", showForm = true, error = "" } = {}) {
+      if (els.accessLockTitle) els.accessLockTitle.textContent = title;
+      if (els.accessLockCopy) els.accessLockCopy.textContent = text;
+      els.accessLockForm?.classList.toggle("hidden", !showForm);
+      showAccessError(error);
+    }
+
     function lockAccess() {
+      setAccessLockState();
       document.body.classList.add("locked");
       if (els.accessCodeInput) {
         els.accessCodeInput.value = "";
         window.setTimeout(() => els.accessCodeInput?.focus(), 0);
       }
-      showAccessError("");
     }
 
     function showAccessError(message) {
@@ -2361,14 +2437,69 @@
       bindStageNav();
       bindPreviewRoot();
       await hydrateProjectsFromCloud();
+      applyRouteMode();
       render();
+    }
+
+    function applyRouteMode() {
+      const requestedProjectId = getRequestedProjectId();
+      if (requestedProjectId) {
+        const requestedProject = state.projects.find(project => project.id === requestedProjectId);
+        if (!requestedProject) {
+          setAccessLockState({
+            title: "Ligipääs puudub",
+            text: "Seda projekti ei leitud või link ei ole enam kehtiv.",
+            showForm: false
+          });
+          document.body.classList.add("locked");
+          return;
+        }
+        state.activeProjectId = requestedProject.id;
+      }
+
+      const project = getProject();
+      if (isClientMode()) {
+        if (!isValidClientAccess(project)) {
+          setAccessLockState({
+            title: "Ligipääs puudub",
+            text: "See kliendilink ei ole kehtiv.",
+            showForm: false
+          });
+          document.body.classList.add("locked");
+          return;
+        }
+        document.body.classList.remove("locked");
+        state.activeStage = "content";
+        state.activePageId = project.pages.find(page => page.navigation)?.id || project.pages[0]?.id || "home";
+        state.activeSectionId = getFirstSectionId(getPage(project)) || "";
+        appRoot.classList.add("route-client");
+        return;
+      }
+
+      if (isLiveMode()) {
+        if (!project?.publishedSnapshot) {
+          setAccessLockState({
+            title: "Live vaade puudub",
+            text: "Seda projekti pole veel live'i avaldatud.",
+            showForm: false
+          });
+          document.body.classList.add("locked");
+          return;
+        }
+        document.body.classList.remove("locked");
+        appRoot.classList.add("route-live");
+        const renderableProject = getRenderableProject(project);
+        state.activePageId = renderableProject.pages.find(page => page.navigation)?.id || renderableProject.pages[0]?.id || "home";
+        state.activeSectionId = getFirstSectionId(getPage(renderableProject)) || "";
+      }
     }
 
     function createProject(blueprintId, name) {
       const blueprint = BLUEPRINTS[blueprintId] || BLUEPRINTS.teenused;
       const pages = blueprint.pages.map(page => createPage(page.title, page.slug, blueprint, page.id));
+      const projectId = uniqueId(slugify(name));
       return {
-        id: uniqueId(slugify(name)),
+        id: projectId,
         name,
         domain: `${slugify(name)}.ee`,
         status: "Mustand",
@@ -2395,8 +2526,11 @@
           enabled: false,
           clientName: "",
           clientEmail: "",
-          inviteToken: ""
-        }
+          inviteToken: uniqueId("client")
+        },
+        publishedSnapshot: null,
+        livePublishedAt: "",
+        lastCloudSavedAt: ""
       };
     }
 
@@ -2501,9 +2635,12 @@
           enabled: false,
           clientName: "",
           clientEmail: "",
-          inviteToken: "",
+          inviteToken: uniqueId("client"),
           ...(project.clientAccess || {})
-        }
+        },
+        publishedSnapshot: project.publishedSnapshot || null,
+        livePublishedAt: project.livePublishedAt || "",
+        lastCloudSavedAt: project.lastCloudSavedAt || ""
       };
 
       normalized.pages = (project.pages || blueprint.pages.map(page => createPage(page.title, page.slug, blueprint, page.id))).map(page => normalizePage(page, blueprint));
@@ -3511,6 +3648,68 @@
       return state.projects.find(project => project.id === state.activeProjectId) || state.projects[0];
     }
 
+    function isClientMode() {
+      return Boolean(ROUTE_MODE.clientProjectId);
+    }
+
+    function isLiveMode() {
+      return Boolean(ROUTE_MODE.liveProjectId);
+    }
+
+    function getRequestedProjectId() {
+      return ROUTE_MODE.liveProjectId || ROUTE_MODE.clientProjectId || "";
+    }
+
+    function getEditableProject(project = getProject()) {
+      return project;
+    }
+
+    function getRenderableProject(project = getProject()) {
+      if (!isLiveMode()) return project;
+      if (!project?.publishedSnapshot) return null;
+      return normalizeProject({
+        ...project,
+        ...structuredClone(project.publishedSnapshot),
+        clientAccess: project.clientAccess,
+        publishedSnapshot: project.publishedSnapshot,
+        livePublishedAt: project.livePublishedAt,
+        lastCloudSavedAt: project.lastCloudSavedAt
+      });
+    }
+
+    function projectHasClientAccess(project = getProject()) {
+      return Boolean(project?.clientAccess?.enabled && project?.clientAccess?.inviteToken);
+    }
+
+    function getClientEditorUrl(project = getProject()) {
+      if (!projectHasClientAccess(project) || !window.location.origin || window.location.protocol === "file:") return "";
+      return `${window.location.origin}${window.location.pathname}?client=${encodeURIComponent(project.id)}&token=${encodeURIComponent(project.clientAccess.inviteToken)}`;
+    }
+
+    function getLiveSiteUrl(project = getProject()) {
+      if (!window.location.origin || window.location.protocol === "file:") return "";
+      return `${window.location.origin}${window.location.pathname}?live=${encodeURIComponent(project.id)}`;
+    }
+
+    function buildPublishedSnapshot(project = getProject()) {
+      return structuredClone({
+        id: project.id,
+        name: project.name,
+        domain: project.domain,
+        status: "Live",
+        blueprintId: project.blueprintId,
+        designTemplateId: project.designTemplateId,
+        theme: project.theme,
+        pages: project.pages
+      });
+    }
+
+    function isValidClientAccess(project = getProject()) {
+      return isClientMode()
+        ? Boolean(project?.id === ROUTE_MODE.clientProjectId && project?.clientAccess?.enabled && project?.clientAccess?.inviteToken === ROUTE_MODE.clientToken)
+        : true;
+    }
+
     function getBlueprint(project = getProject()) {
       return BLUEPRINTS[project.blueprintId] || BLUEPRINTS.teenused;
     }
@@ -3531,7 +3730,28 @@
       return page.sections.find(section => section.type === type)?.id || getFirstSectionId(page);
     }
 
+    function isClientEditableKey(key = "") {
+      if (!key) return false;
+      if ([
+        "heroEyebrow",
+        "heroTitle",
+        "heroDescription",
+        "heroCta",
+        "heroMediaUrl",
+        "heroMediaLabel",
+        "ctaTitle",
+        "ctaText",
+        "ctaContact",
+        "ctaButton",
+        "sectionLabel",
+        "sectionButtonText"
+      ].includes(key)) return true;
+      return /^(cardTitle|cardMeta|cardPrice|cardText|cardImage|galleryTitle|galleryText|galleryImage|trustItem):\d+$/.test(key);
+    }
+
     function editableAttrs({ key, kind = "text", pageId = state.activePageId, sectionId = state.activeSectionId, stage = "content" } = {}) {
+      if (isLiveMode()) return "";
+      if (isClientMode() && !isClientEditableKey(key)) return "";
       return `data-edit-key="${escapeAttr(key)}" data-edit-kind="${escapeAttr(kind)}" data-edit-page="${escapeAttr(pageId)}" data-edit-section="${escapeAttr(sectionId || "")}" data-edit-stage="${escapeAttr(stage)}"`;
     }
 
@@ -3540,6 +3760,16 @@
     }
 
     function handlePreviewClick(event) {
+      if (isLiveMode()) {
+        const pageNode = event.target.closest("[data-preview-page]");
+        if (!pageNode || !els.sitePreview.contains(pageNode)) return;
+        state.activePageId = pageNode.dataset.previewPage;
+        state.activeSectionId = getFirstSectionId(getPage(getRenderableProject())) || "";
+        renderPreview();
+        saveState(false);
+        return;
+      }
+
       const editNode = event.target.closest("[data-edit-key]");
       if (editNode && els.sitePreview.contains(editNode)) {
         event.preventDefault();
@@ -3600,6 +3830,7 @@
 
     function setEditorValueByKey(page, section, key, value) {
       if (!page || !key) return false;
+      if (isClientMode() && !isClientEditableKey(key)) return false;
       if (key === "pageTitle") {
         page.title = value;
         return true;
@@ -3753,6 +3984,10 @@
 
     function bindTopbar() {
       els.saveBtn.addEventListener("click", async () => {
+        if (isClientMode()) {
+          await publishProjectLive();
+          return;
+        }
         await saveProjectToCloud();
       });
 
@@ -3815,23 +4050,41 @@
 
     function renderTopbar() {
       const project = getProject();
-      const page = getPage(project);
+      const renderableProject = getRenderableProject(project) || project;
+      const page = getPage(renderableProject);
       appRoot.classList.toggle("preview-mode", state.previewMode);
+      appRoot.classList.toggle("route-client", isClientMode());
+      appRoot.classList.toggle("route-live", isLiveMode());
       els.projectChipName.textContent = project.name;
-      els.projectChipMeta.textContent = `${getBlueprint(project).label} · ${project.status}`;
-      els.previewTitle.textContent = project.name;
-      els.previewMeta.textContent = `${getBlueprint(project).label} · ${project.domain} · ${project.status}`;
-      els.blueprintPill.textContent = getBlueprint(project).label;
+      els.projectChipMeta.textContent = `${getBlueprint(project).label} · ${isLiveMode() ? "Live vaade" : project.status}`;
+      els.previewTitle.textContent = isLiveMode() ? `${renderableProject.name} live` : project.name;
+      els.previewMeta.textContent = `${getBlueprint(project).label} · ${renderableProject.domain} · ${isLiveMode() ? `Avaldatud ${formatPublishedAt(project.livePublishedAt)}` : project.status}`;
+      els.blueprintPill.textContent = isLiveMode() ? "LIVE" : getBlueprint(project).label;
       els.pagePill.textContent = page.title;
-        els.saveIndicator.textContent = state.lastSavedAt ? `Salvestatud ${state.lastSavedAt}` : "Automaatsalvestus aktiivne";
+      els.saveIndicator.textContent = isLiveMode()
+        ? (project.livePublishedAt ? `Live ${formatPublishedAt(project.livePublishedAt)}` : "Live vaade")
+        : state.lastSavedAt ? `Salvestatud ${state.lastSavedAt}` : "Automaatsalvestus aktiivne";
       els.previewModeBtn.textContent = state.previewMode ? "Tagasi redaktorisse" : "Eelvaade";
+      els.saveBtn.textContent = isClientMode() ? "LIVE" : "Salvesta";
+      els.previewModeBtn.classList.toggle("hidden", isLiveMode());
+      els.trailerBtn.classList.toggle("hidden", isClientMode() || isLiveMode());
+      els.exportBtn.classList.toggle("hidden", isClientMode() || isLiveMode());
+      els.saveBtn.classList.toggle("hidden", isLiveMode());
       document.querySelectorAll("[data-device]").forEach(button => {
         button.classList.toggle("active", button.dataset.device === state.device);
       });
     }
 
     function renderStageNav() {
-      els.stageNav.innerHTML = STAGES.map(stage => `
+      const stages = isClientMode() ? STAGES.filter(stage => CLIENT_VISIBLE_STAGES.includes(stage.id)) : STAGES;
+      if (isLiveMode()) {
+        els.stageNav.innerHTML = "";
+        return;
+      }
+      if (!stages.some(stage => stage.id === state.activeStage)) {
+        state.activeStage = stages[0]?.id || "content";
+      }
+      els.stageNav.innerHTML = stages.map(stage => `
         <button data-stage="${stage.id}" class="${stage.id === state.activeStage ? "active" : ""}">
           <span class="stage-icon">${stage.icon}</span>
           <span>${escapeHtml(stage.label)}</span>
@@ -3840,6 +4093,17 @@
     }
 
     function renderPanel() {
+      if (isLiveMode()) {
+        els.panelTitle.textContent = "";
+        els.panelIntro.textContent = "";
+        els.panelBody.innerHTML = "";
+        return;
+      }
+
+      if (isClientMode() && !CLIENT_VISIBLE_STAGES.includes(state.activeStage)) {
+        state.activeStage = "content";
+      }
+
       const project = getProject();
       const page = getPage(project);
       const section = getSection(page);
@@ -4020,18 +4284,29 @@
       const project = getProject();
       const stage = "content";
       const pageSettingsKey = panelGroupKey(stage, page.id, section.id, "page-settings");
-      const pageSettings = renderAccordion({
-        key: pageSettingsKey,
-        title: "Leht ja sektsioon",
-        subtitle: `${page.title} · ${section.label}`,
-        open: isPanelGroupOpen(pageSettingsKey, keyMatchesPendingEditor(["pageTitle", "pageSlug", "sectionLabel", "sectionButtonText"])),
-        content: `
-          <div class="field"><label>Menüü nimi</label><input id="pageTitle" data-editor-key="pageTitle" value="${escapeAttr(page.title)}"></div>
-          <div class="field"><label>Lehe aadress</label><input id="pageSlug" data-editor-key="pageSlug" value="${escapeAttr(page.slug)}"></div>
-          <div class="field"><label>Sektsiooni pealkiri</label><input id="contentSectionLabel" data-editor-key="sectionLabel" value="${escapeAttr(section.label)}"></div>
-          <div class="field"><label>Sektsiooni nupu tekst</label><input id="contentSectionButtonText" data-editor-key="sectionButtonText" value="${escapeAttr(section.settings.buttonText || "Võta ühendust")}"></div>
-        `
-      });
+      const pageSettings = isClientMode()
+        ? renderAccordion({
+            key: pageSettingsKey,
+            title: "Sektsiooni sisu",
+            subtitle: `${page.title} · ${section.label}`,
+            open: isPanelGroupOpen(pageSettingsKey, keyMatchesPendingEditor(["sectionLabel", "sectionButtonText"])),
+            content: `
+              <div class="field"><label>Sektsiooni pealkiri</label><input id="contentSectionLabel" data-editor-key="sectionLabel" value="${escapeAttr(section.label)}"></div>
+              <div class="field"><label>Sektsiooni nupu tekst</label><input id="contentSectionButtonText" data-editor-key="sectionButtonText" value="${escapeAttr(section.settings.buttonText || "Võta ühendust")}"></div>
+            `
+          })
+        : renderAccordion({
+            key: pageSettingsKey,
+            title: "Leht ja sektsioon",
+            subtitle: `${page.title} · ${section.label}`,
+            open: isPanelGroupOpen(pageSettingsKey, keyMatchesPendingEditor(["pageTitle", "pageSlug", "sectionLabel", "sectionButtonText"])),
+            content: `
+              <div class="field"><label>Menüü nimi</label><input id="pageTitle" data-editor-key="pageTitle" value="${escapeAttr(page.title)}"></div>
+              <div class="field"><label>Lehe aadress</label><input id="pageSlug" data-editor-key="pageSlug" value="${escapeAttr(page.slug)}"></div>
+              <div class="field"><label>Sektsiooni pealkiri</label><input id="contentSectionLabel" data-editor-key="sectionLabel" value="${escapeAttr(section.label)}"></div>
+              <div class="field"><label>Sektsiooni nupu tekst</label><input id="contentSectionButtonText" data-editor-key="sectionButtonText" value="${escapeAttr(section.settings.buttonText || "Võta ühendust")}"></div>
+            `
+          });
 
       const renderImageActions = (key, label) => `
         <div class="inline compact">
@@ -4236,6 +4511,33 @@
     }
 
     function renderPublishPanel(project) {
+      const clientUrl = getClientEditorUrl(project);
+      const liveUrl = getLiveSiteUrl(project);
+      if (isClientMode()) {
+        return `
+          <div class="card stack">
+            <h3>Live avaldamine</h3>
+            <div class="status-list">
+              <div class="status-item"><span>Projekt</span><strong>${escapeHtml(project.name)}</strong></div>
+              <div class="status-item"><span>Viimane live</span><strong>${project.livePublishedAt ? formatPublishedAt(project.livePublishedAt) : "Veel mitte"}</strong></div>
+              <div class="status-item"><span>Pilvesalvestus</span><strong>${state.cloudAvailable ? "Saadaval" : "Ainult lokaalne"}</strong></div>
+            </div>
+          </div>
+          <div class="card stack">
+            <p>Kui muudatused on eelvaates õiged, vajuta LIVE. See salvestab sinu praeguse sisu pilve ja teeb selle kohe live-vaates nähtavaks.</p>
+            <div class="inline">
+              <button id="publishLiveBtn" class="btn-danger">LIVE</button>
+            </div>
+            <div class="field">
+              <label>Live-link</label>
+              <input value="${escapeAttr(liveUrl || "Live-link tekib deployitud versioonis")}" readonly>
+            </div>
+            <div class="inline">
+              <button id="liveLinkBtn" class="btn-ghost">Kopeeri live-link</button>
+            </div>
+          </div>
+        `;
+      }
       return `
         <div class="card stack">
           <h3>Projekti olek</h3>
@@ -4243,6 +4545,7 @@
             <div class="status-item"><span>Projekt</span><strong>${escapeHtml(project.name)}</strong></div>
             <div class="status-item"><span>Olek</span><strong>${escapeHtml(project.status)}</strong></div>
             <div class="status-item"><span>Pilvesalvestus</span><strong>${state.cloudAvailable ? "Saadaval" : "Ainult lokaalne"}</strong></div>
+            <div class="status-item"><span>LIVE avaldatud</span><strong>${project.livePublishedAt ? formatPublishedAt(project.livePublishedAt) : "Veel mitte"}</strong></div>
           </div>
         </div>
         <div class="card stack">
@@ -4254,14 +4557,31 @@
             <label>Kliendi e-post</label>
             <input id="clientEmail" value="${escapeAttr(project.clientAccess.clientEmail)}">
           </div>
+          <label class="mini-check">
+            <input id="clientAccessEnabled" type="checkbox" ${project.clientAccess.enabled ? "checked" : ""}>
+            <span>Kliendivaade aktiivne</span>
+          </label>
+          <div class="field">
+            <label>Kliendilink</label>
+            <input value="${escapeAttr(clientUrl || "Aktiveeri kliendivaade deployitud versioonis")}" readonly>
+          </div>
+          <div class="field">
+            <label>Live-link</label>
+            <input value="${escapeAttr(liveUrl || "Live-link tekib deployitud versioonis")}" readonly>
+          </div>
           <div class="inline">
             <button id="publishSaveBtn" class="btn-primary">Salvesta projekti koopia</button>
+            <button id="publishLiveBtn" class="btn-danger">LIVE</button>
             <button id="publishExportBtn" class="btn">Ekspordi aktiivne HTML</button>
+          </div>
+          <div class="inline">
+            <button id="clientLinkBtn" class="btn-ghost">Kopeeri kliendilink</button>
+            <button id="liveLinkBtn" class="btn-ghost">Kopeeri live-link</button>
           </div>
         </div>
         <div class="card">
           <h3>Mõte</h3>
-          <p>See vaade on mõeldud selleks, et saaksite valmis näidislehe ära salvestada, kliendile ette näidata ja siis hiljem sama faili väga lihtsalt muuta.</p>
+          <p>Klient muudab sisu draftis. Alles LIVE nupu vajutus kopeerib muudatused avaldatud versiooni ja teeb need päriselt live’is nähtavaks.</p>
         </div>
       `;
     }
@@ -4282,7 +4602,11 @@
     }
 
     function renderPreview() {
-      const project = getProject();
+      const project = isLiveMode() ? getRenderableProject() : (getRenderableProject() || getProject());
+      if (!project) {
+        els.sitePreview.innerHTML = "";
+        return;
+      }
       const page = getPage(project);
       const navPages = project.pages.filter(item => item.navigation);
       els.previewFrame.className = `preview-frame device-${state.device}`;
@@ -4824,10 +5148,37 @@
       });
       document.querySelector("#clientEmail")?.addEventListener("input", event => {
         project.clientAccess.clientEmail = event.target.value;
+        project.clientAccess.enabled = Boolean(event.target.value.trim());
         autosave();
+      });
+      document.querySelector("#clientAccessEnabled")?.addEventListener("change", event => {
+        project.clientAccess.enabled = Boolean(event.target.checked);
+        autosave();
+        renderPanel();
+      });
+      document.querySelector("#clientLinkBtn")?.addEventListener("click", async () => {
+        const url = getClientEditorUrl(project);
+        if (!url) {
+          showToast("Kliendilink vajab deployitud versiooni ja aktiivset ligipääsu");
+          return;
+        }
+        await copyText(url);
+        showToast("Kliendilink kopeeritud");
+      });
+      document.querySelector("#liveLinkBtn")?.addEventListener("click", async () => {
+        const url = getLiveSiteUrl(project);
+        if (!url) {
+          showToast("Live-link vajab deployitud versiooni");
+          return;
+        }
+        await copyText(url);
+        showToast("Live-link kopeeritud");
       });
       document.querySelector("#publishSaveBtn")?.addEventListener("click", async () => {
         await saveProjectToCloud();
+      });
+      document.querySelector("#publishLiveBtn")?.addEventListener("click", async () => {
+        await publishProjectLive();
       });
       document.querySelector("#publishExportBtn")?.addEventListener("click", () => {
         exportActivePageHtml();
@@ -5056,8 +5407,9 @@
       autosave();
     }
 
-    async function saveProjectToCloud() {
+    async function saveProjectToCloud(options = {}) {
       const project = getProject();
+      const { toastMessage = "Pilve salvestatud" } = options;
       if (window.location.protocol === "file:") {
         state.cloudAvailable = false;
         saveState(false);
@@ -5067,6 +5419,7 @@
         return;
       }
       try {
+        project.lastCloudSavedAt = new Date().toISOString();
         const payload = {
           site: {
             id: project.id,
@@ -5090,7 +5443,7 @@
         saveState(false);
         renderTopbar();
         renderPanel();
-        showToast("Pilve salvestatud");
+        showToast(toastMessage);
       } catch (error) {
         state.cloudAvailable = false;
         saveState(false);
@@ -5100,6 +5453,14 @@
         const message = String(error?.message || error || "");
         showToast(message ? `Pilvesalvestus ebaõnnestus: ${message.slice(0, 80)}` : "Pilvesalvestus ebaõnnestus");
       }
+    }
+
+    async function publishProjectLive() {
+      const project = getProject();
+      project.publishedSnapshot = buildPublishedSnapshot(project);
+      project.livePublishedAt = new Date().toISOString();
+      project.status = "Live";
+      await saveProjectToCloud({ toastMessage: "LIVE versioon avaldatud" });
     }
 
     async function hydrateProjectsFromCloud() {
@@ -5641,6 +6002,35 @@
 
     function timeNow() {
       return new Date().toLocaleTimeString("et-EE", { hour: "2-digit", minute: "2-digit" });
+    }
+
+    function formatPublishedAt(value = "") {
+      if (!value) return "";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return "";
+      return date.toLocaleString("et-EE", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
+
+    async function copyText(value = "") {
+      if (!value) return false;
+      try {
+        await navigator.clipboard.writeText(value);
+        return true;
+      } catch {
+        const input = document.createElement("input");
+        input.value = value;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand("copy");
+        input.remove();
+        return true;
+      }
     }
 
     function escapeHtml(value) {
