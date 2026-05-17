@@ -338,6 +338,30 @@
       text-overflow: ellipsis;
     }
 
+    .project-switch {
+      display: grid;
+      gap: 6px;
+      min-width: 220px;
+      max-width: 280px;
+    }
+
+    .project-switch-label {
+      font-size: 11px;
+      line-height: 1;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .topbar-project-select {
+      min-width: 0;
+      max-width: 100%;
+      padding-top: 9px;
+      padding-bottom: 9px;
+      font-weight: 700;
+    }
+
     .device-switch {
       display: inline-flex;
       align-items: center;
@@ -2017,6 +2041,10 @@
         padding-left: 0;
       }
 
+      .project-switch {
+        min-width: 180px;
+      }
+
     }
 
     @media (max-width: 1080px) {
@@ -2059,6 +2087,12 @@
         <div class="project-chip">
           <strong id="projectChipName">Starter</strong>
           <span id="projectChipMeta">Teenuseäri · Mustand</span>
+        </div>
+        <div class="project-switch" id="topbarProjectSwitch">
+          <span class="project-switch-label">Projekt</span>
+          <select id="topbarProjectSelect" class="top-select topbar-project-select" aria-label="Vaheta projekti">
+            <option>Starter</option>
+          </select>
         </div>
       </div>
       <div class="topbar-center">
@@ -2330,6 +2364,8 @@
       saveIndicator: document.querySelector("#saveIndicator"),
       projectChipName: document.querySelector("#projectChipName"),
       projectChipMeta: document.querySelector("#projectChipMeta"),
+      topbarProjectSwitch: document.querySelector("#topbarProjectSwitch"),
+      topbarProjectSelect: document.querySelector("#topbarProjectSelect"),
       stageNav: document.querySelector("#stageNav"),
       panelTitle: document.querySelector("#panelTitle"),
       panelIntro: document.querySelector("#panelIntro"),
@@ -3714,6 +3750,17 @@
       return BLUEPRINTS[project.blueprintId] || BLUEPRINTS.teenused;
     }
 
+    function setActiveProject(projectId) {
+      const nextProject = state.projects.find(project => project.id === projectId);
+      if (!nextProject || nextProject.id === state.activeProjectId) return;
+      const nextPage = nextProject.pages.find(page => page.id === state.activePageId) || nextProject.pages[0];
+      state.activeProjectId = nextProject.id;
+      state.activePageId = nextPage?.id || "home";
+      state.activeSectionId = getFirstSectionId(nextPage);
+      render();
+      saveState();
+    }
+
     function getPage(project = getProject()) {
       return project.pages.find(page => page.id === state.activePageId) || project.pages[0];
     }
@@ -3983,6 +4030,10 @@
     }
 
     function bindTopbar() {
+      els.topbarProjectSelect?.addEventListener("change", event => {
+        setActiveProject(event.target.value);
+      });
+
       els.saveBtn.addEventListener("click", async () => {
         if (isClientMode()) {
           await publishProjectLive();
@@ -4052,11 +4103,20 @@
       const project = getProject();
       const renderableProject = getRenderableProject(project) || project;
       const page = getPage(renderableProject);
+      const section = getSection(page);
+      const currentStage = STAGES.find(stage => stage.id === state.activeStage);
+      const locationParts = [currentStage?.label, page?.title, section?.label].filter(Boolean);
       appRoot.classList.toggle("preview-mode", state.previewMode);
       appRoot.classList.toggle("route-client", isClientMode());
       appRoot.classList.toggle("route-live", isLiveMode());
       els.projectChipName.textContent = project.name;
-      els.projectChipMeta.textContent = `${getBlueprint(project).label} · ${isLiveMode() ? "Live vaade" : project.status}`;
+      els.projectChipMeta.textContent = locationParts.join(" · ");
+      if (els.topbarProjectSelect) {
+        els.topbarProjectSelect.innerHTML = state.projects.map(item => (
+          `<option value="${item.id}" ${item.id === project.id ? "selected" : ""}>${escapeHtml(item.name)}</option>`
+        )).join("");
+        els.topbarProjectSelect.value = project.id;
+      }
       els.previewTitle.textContent = isLiveMode() ? `${renderableProject.name} live` : project.name;
       els.previewMeta.textContent = `${getBlueprint(project).label} · ${renderableProject.domain} · ${isLiveMode() ? `Avaldatud ${formatPublishedAt(project.livePublishedAt)}` : project.status}`;
       els.blueprintPill.textContent = isLiveMode() ? "LIVE" : getBlueprint(project).label;
@@ -4066,6 +4126,7 @@
         : state.lastSavedAt ? `Salvestatud ${state.lastSavedAt}` : "Automaatsalvestus aktiivne";
       els.previewModeBtn.textContent = state.previewMode ? "Tagasi redaktorisse" : "Eelvaade";
       els.saveBtn.textContent = isClientMode() ? "LIVE" : "Salvesta";
+      els.topbarProjectSwitch?.classList.toggle("hidden", isClientMode() || isLiveMode());
       els.previewModeBtn.classList.toggle("hidden", isLiveMode());
       els.trailerBtn.classList.toggle("hidden", isClientMode() || isLiveMode());
       els.exportBtn.classList.toggle("hidden", isClientMode() || isLiveMode());
@@ -4914,11 +4975,7 @@
     function bindGeneratePanel() {
       const project = getProject();
       document.querySelector("#projectSelect")?.addEventListener("change", event => {
-        state.activeProjectId = event.target.value;
-        state.activePageId = getProject().pages[0]?.id || "home";
-        state.activeSectionId = getPage().sections[0]?.id || "";
-        render();
-        saveState();
+        setActiveProject(event.target.value);
       });
 
       document.querySelector("#newProjectBtn")?.addEventListener("click", () => {
