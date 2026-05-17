@@ -2167,16 +2167,17 @@
     const appRoot = document.querySelector(".app");
     const ACCESS_CODE = "miljonbiljon";
     const ACCESS_STORAGE_KEY = "website_builder_access_v1";
+    const MEMBER_ACCESS_STORAGE_PREFIX = "website_builder_member_access_v1:";
     const STORAGE_KEY = "website_builder_v7";
     const routeParams = new URLSearchParams(window.location.search);
     const ROUTE_MODE = {
-      clientProjectId: routeParams.get("client") || "",
+      clientProjectId: routeParams.get("member") || routeParams.get("client") || "",
       clientToken: routeParams.get("token") || "",
       liveProjectId: routeParams.get("live") || ""
     };
     const CLIENT_VISIBLE_STAGES = ["content", "publish"];
     const STAGES = [
-      { id: "generate", label: "Alustus", icon: "✦" },
+      { id: "generate", label: "Projektid", icon: "✦" },
       { id: "structure", label: "Lehed", icon: "▣" },
       { id: "content", label: "Sisu", icon: "▦" },
       { id: "design", label: "Välimus", icon: "◒" },
@@ -2406,9 +2407,6 @@
 
     function boot() {
       if (isClientMode() || isLiveMode()) {
-        appRoot.classList.toggle("route-client", isClientMode());
-        appRoot.classList.toggle("route-live", isLiveMode());
-        document.body.classList.remove("locked");
         hasInitialized = true;
         init();
         return;
@@ -2425,6 +2423,18 @@
       els.accessLockForm?.addEventListener("submit", event => {
         event.preventDefault();
         const value = String(els.accessCodeInput?.value || "").trim();
+        if (isClientMode()) {
+          const project = getProject();
+          if (value && value === String(project?.clientAccess?.password || "").trim()) {
+            unlockMemberAccess(project.id);
+            document.body.classList.remove("locked");
+            showAccessError("");
+            render();
+            return;
+          }
+          showAccessError("Vale parool");
+          return;
+        }
         if (value === ACCESS_CODE) {
           unlockAccess();
           return;
@@ -2437,10 +2447,11 @@
       return localStorage.getItem(ACCESS_STORAGE_KEY) === "ok";
     }
 
-    function setAccessLockState({ title = "Sisesta ligipääsukood", text = "See leht avaneb ainult õige koodiga.", showForm = true, error = "" } = {}) {
+    function setAccessLockState({ title = "Sisesta ligipääsukood", text = "See leht avaneb ainult õige koodiga.", showForm = true, error = "", placeholder = "Sisesta kood" } = {}) {
       if (els.accessLockTitle) els.accessLockTitle.textContent = title;
       if (els.accessLockCopy) els.accessLockCopy.textContent = text;
       els.accessLockForm?.classList.toggle("hidden", !showForm);
+      if (els.accessCodeInput) els.accessCodeInput.placeholder = placeholder;
       showAccessError(error);
     }
 
@@ -2455,6 +2466,24 @@
 
     function showAccessError(message) {
       if (els.accessLockError) els.accessLockError.textContent = message;
+    }
+
+    function getMemberAccessStorageKey(projectId = "") {
+      return `${MEMBER_ACCESS_STORAGE_PREFIX}${projectId}`;
+    }
+
+    function unlockMemberAccess(projectId = "") {
+      if (!projectId) return;
+      localStorage.setItem(getMemberAccessStorageKey(projectId), "ok");
+    }
+
+    function clearMemberAccess(projectId = "") {
+      if (!projectId) return;
+      localStorage.removeItem(getMemberAccessStorageKey(projectId));
+    }
+
+    function isMemberAccessUnlocked(project = getProject()) {
+      return localStorage.getItem(getMemberAccessStorageKey(project?.id || "")) === "ok";
     }
 
     async function unlockAccess({ persist = true } = {}) {
@@ -2498,10 +2527,24 @@
         if (!isValidClientAccess(project)) {
           setAccessLockState({
             title: "Ligipääs puudub",
-            text: "See kliendilink ei ole kehtiv.",
+            text: "See liikmelink ei ole kehtiv.",
             showForm: false
           });
           document.body.classList.add("locked");
+          return;
+        }
+        if (!isMemberAccessUnlocked(project)) {
+          setAccessLockState({
+            title: `${project.name} liikmevaade`,
+            text: "Sisesta selle projekti parool, et sisu muuta ja LIVE nuppu kasutada.",
+            showForm: true,
+            error: "",
+            placeholder: "Sisesta projekti parool"
+          });
+          document.body.classList.add("locked");
+          if (els.accessCodeInput) {
+            els.accessCodeInput.value = "";
+          }
           return;
         }
         document.body.classList.remove("locked");
@@ -2562,7 +2605,8 @@
           enabled: false,
           clientName: "",
           clientEmail: "",
-          inviteToken: uniqueId("client")
+          inviteToken: uniqueId("client"),
+          password: createMemberPassword()
         },
         publishedSnapshot: null,
         livePublishedAt: "",
@@ -2672,6 +2716,7 @@
           clientName: "",
           clientEmail: "",
           inviteToken: uniqueId("client"),
+          password: createMemberPassword(),
           ...(project.clientAccess || {})
         },
         publishedSnapshot: project.publishedSnapshot || null,
@@ -3714,12 +3759,21 @@
     }
 
     function projectHasClientAccess(project = getProject()) {
-      return Boolean(project?.clientAccess?.enabled && project?.clientAccess?.inviteToken);
+      return Boolean(
+        project?.clientAccess?.enabled &&
+        project?.clientAccess?.inviteToken &&
+        String(project?.clientAccess?.password || "").trim()
+      );
+    }
+
+    function getAdminBuilderUrl() {
+      if (!window.location.origin || window.location.protocol === "file:") return "";
+      return `${window.location.origin}${window.location.pathname}`;
     }
 
     function getClientEditorUrl(project = getProject()) {
       if (!projectHasClientAccess(project) || !window.location.origin || window.location.protocol === "file:") return "";
-      return `${window.location.origin}${window.location.pathname}?client=${encodeURIComponent(project.id)}&token=${encodeURIComponent(project.clientAccess.inviteToken)}`;
+      return `${window.location.origin}${window.location.pathname}?member=${encodeURIComponent(project.id)}&token=${encodeURIComponent(project.clientAccess.inviteToken)}`;
     }
 
     function getLiveSiteUrl(project = getProject()) {
@@ -3742,7 +3796,12 @@
 
     function isValidClientAccess(project = getProject()) {
       return isClientMode()
-        ? Boolean(project?.id === ROUTE_MODE.clientProjectId && project?.clientAccess?.enabled && project?.clientAccess?.inviteToken === ROUTE_MODE.clientToken)
+        ? Boolean(
+            project?.id === ROUTE_MODE.clientProjectId &&
+            project?.clientAccess?.enabled &&
+            project?.clientAccess?.inviteToken === ROUTE_MODE.clientToken &&
+            String(project?.clientAccess?.password || "").trim()
+          )
         : true;
     }
 
@@ -4171,8 +4230,8 @@
       const blueprint = getBlueprint(project);
 
       if (state.activeStage === "generate") {
-        els.panelTitle.textContent = "Alustus";
-        els.panelIntro.textContent = "Alusta ühest URL-ist, Facebooki lehest või juhisest. Veebiehitaja loob esimese algversiooni sinu eest.";
+        els.panelTitle.textContent = "Projektid";
+        els.panelIntro.textContent = "Siit valid poolelioleva projekti või alustad uue. Admin URL jääb sulle, liikmele saad saata eraldi projektilingi ja parooli.";
         els.panelBody.innerHTML = renderGeneratePanel(project, blueprint);
         bindGeneratePanel();
         applyPendingEditorFocus();
@@ -4208,7 +4267,7 @@
 
       if (state.activeStage === "publish") {
         els.panelTitle.textContent = "Avalda";
-        els.panelIntro.textContent = "Salvesta näidisvaade, ekspordi HTML ja lisa kliendi kontakt.";
+        els.panelIntro.textContent = "Admin hoiab builderit enda käes. Liige saab eraldi lingi, oma parooli ja LIVE nupuga avaldamise.";
         els.panelBody.innerHTML = renderPublishPanel(project);
         bindPublishPanel();
         applyPendingEditorFocus();
@@ -4217,23 +4276,59 @@
     }
 
     function renderGeneratePanel(project, blueprint) {
+      const adminUrl = getAdminBuilderUrl();
       return `
-        <div class="settings-card project-switcher">
+        <div class="settings-card stack">
+          <h3>Alusta uus leht</h3>
           <div class="field">
-            <label>Projekt</label>
-            <select id="projectSelect" class="top-select" aria-label="Vali projekt">
-              <optgroup label="Pooleli olevad kodulehed">
-                ${state.projects.map(item => (
-                  `<option value="${item.id}" ${item.id === project.id ? "selected" : ""}>${escapeHtml(item.name)}</option>`
-                )).join("")}
-              </optgroup>
-            </select>
+            <label>Projekti nimi</label>
+            <input id="newProjectName" placeholder="Nt RitaLI OÜ">
           </div>
-          <button id="newProjectBtn" class="btn">Uus projekt</button>
+          <div class="field">
+            <label>Veebilehe URL</label>
+            <input id="newProjectWebsite" placeholder="https://ettevote.ee">
+          </div>
+          <div class="field">
+            <label>Facebooki URL</label>
+            <input id="newProjectFacebook" placeholder="https://facebook.com/ettevote">
+          </div>
+          <div class="field">
+            <label>Märkmed</label>
+            <textarea id="newProjectInstructions" placeholder="Mida selle lehega vaja on? Näiteks teenused, pood, broneerimine, kontaktid, toon jne."></textarea>
+          </div>
+          <div class="inline">
+            <button id="createProjectBtn" class="btn-primary">Alusta uus leht</button>
+          </div>
+          <p class="compact-note">Uus projekt tekib siia admin builderisse. Liikme lingi ja parooli saad hiljem valitud projekti alt.</p>
         </div>
 
         <div class="settings-card stack">
-          <h3>Allikad</h3>
+          <h3>Vali pooleliolev</h3>
+          <div class="tree-group">
+            ${state.projects.map(item => `
+              <div class="tree-item ${item.id === project.id ? "active" : ""}">
+                <div class="tree-item-row">
+                  <button class="page-link" data-open-project="${item.id}">
+                    <strong>${escapeHtml(item.name)}</strong>
+                    <span>${escapeHtml(getBlueprint(item).label)} · ${escapeHtml(item.status)}${item.livePublishedAt ? ` · live ${escapeHtml(formatPublishedAt(item.livePublishedAt))}` : ""}</span>
+                  </button>
+                  <div class="item-actions">
+                    <button class="mini-btn" data-copy-member-link="${item.id}" ${projectHasClientAccess(item) ? "" : "disabled"}>Liige</button>
+                    <button class="mini-btn" data-copy-live-link="${item.id}" ${getLiveSiteUrl(item) ? "" : "disabled"}>Live</button>
+                  </div>
+                </div>
+              </div>
+            `).join("")}
+          </div>
+          <div class="field">
+            <label>Admin URL</label>
+            <input value="${escapeAttr(adminUrl || "Admin URL tekib deployitud versioonis")}" readonly>
+          </div>
+          <p class="compact-note">Praegune deployitud URL on admin. Iga projekti liikme link tekib eraldi ja avaneb parooliga.</p>
+        </div>
+
+        <div class="settings-card stack">
+          <h3>Valitud projekti allikad</h3>
           <div class="field">
             <label>Veebilehe URL</label>
             <input id="sourceWebsite" value="${escapeAttr(project.source.websiteUrl)}" placeholder="https://ettevote.ee">
@@ -4243,33 +4338,14 @@
             <input id="sourceFacebook" value="${escapeAttr(project.source.facebookUrl)}" placeholder="https://facebook.com/ettevote">
           </div>
           <div class="field">
-            <label>Valdkonna vihje</label>
-            <input id="sourceIndustryHint" value="${escapeAttr(project.source.industryHint)}" placeholder="Näiteks: premium ilusalong, perekohvik, ehitusfirma">
-          </div>
-          <div class="field">
-            <label>Juhiste kast</label>
+            <label>Märkmed</label>
             <textarea id="sourceInstructions" placeholder="Kirjuta siia, mida ehitaja peab rõhutama: millised lehed, milline toon, kas fookus on broneerimisel, toodetel, menüül, paketil, kontaktidel jne.">${escapeHtml(project.source.instructions)}</textarea>
           </div>
           <div class="inline">
-            <button id="generateBtn" class="btn-primary">Koonda info ja loo starter</button>
-            <button id="starterResetBtn" class="btn-ghost">Lähtesta</button>
+            <button id="generateBtn" class="btn-primary">Koonda info ja uuenda starterit</button>
+            <button id="starterResetBtn" class="btn-ghost">Lähtesta starter</button>
           </div>
-          <p class="compact-note">${escapeHtml(project.source.lastResult || "Tööriist koondab tekstid, kontaktid, pildid ja värvid ning pakub neist algversiooni.")}</p>
-        </div>
-
-        <div class="settings-card">
-          <h3>Valdkond ja lehed</h3>
-          <div class="blueprint-grid">
-            ${Object.values(BLUEPRINTS).map(item => `
-              <div class="blueprint-card ${item.id === project.blueprintId ? "active" : ""}" data-blueprint="${item.id}">
-                <button>
-                  <strong>${escapeHtml(item.label)}</strong>
-                  <p>${escapeHtml(item.summary)}</p>
-                </button>
-              </div>
-            `).join("")}
-          </div>
-          <div class="compact-note">${escapeHtml(blueprint.summary)}</div>
+          <p class="compact-note">${escapeHtml(project.source.lastResult || "Vali pooleliolev projekt või loo uus. Kui lisad URL-i, saab builder sellest esimese starteri kokku panna.")}</p>
           <div class="inline">
             ${blueprint.pages.map(page => `<span class="pill">${escapeHtml(page.title)}</span>`).join("")}
           </div>
@@ -4574,6 +4650,7 @@
     function renderPublishPanel(project) {
       const clientUrl = getClientEditorUrl(project);
       const liveUrl = getLiveSiteUrl(project);
+      const adminUrl = getAdminBuilderUrl();
       if (isClientMode()) {
         return `
           <div class="card stack">
@@ -4611,20 +4688,28 @@
         </div>
         <div class="card stack">
           <div class="field">
-            <label>Kliendi nimi</label>
+            <label>Liikme nimi</label>
             <input id="clientName" value="${escapeAttr(project.clientAccess.clientName)}">
           </div>
           <div class="field">
-            <label>Kliendi e-post</label>
+            <label>Liikme e-post</label>
             <input id="clientEmail" value="${escapeAttr(project.clientAccess.clientEmail)}">
+          </div>
+          <div class="field">
+            <label>Liikme parool</label>
+            <input id="clientPassword" value="${escapeAttr(project.clientAccess.password || "")}" placeholder="Sisesta projekti parool">
           </div>
           <label class="mini-check">
             <input id="clientAccessEnabled" type="checkbox" ${project.clientAccess.enabled ? "checked" : ""}>
-            <span>Kliendivaade aktiivne</span>
+            <span>Liikmevaade aktiivne</span>
           </label>
           <div class="field">
-            <label>Kliendilink</label>
-            <input value="${escapeAttr(clientUrl || "Aktiveeri kliendivaade deployitud versioonis")}" readonly>
+            <label>Admin URL</label>
+            <input value="${escapeAttr(adminUrl || "Admin URL tekib deployitud versioonis")}" readonly>
+          </div>
+          <div class="field">
+            <label>Liikmelink</label>
+            <input value="${escapeAttr(clientUrl || "Aktiveeri liikmevaade, lisa parool ja kasuta deployitud versiooni")}" readonly>
           </div>
           <div class="field">
             <label>Live-link</label>
@@ -4636,13 +4721,15 @@
             <button id="publishExportBtn" class="btn">Ekspordi aktiivne HTML</button>
           </div>
           <div class="inline">
-            <button id="clientLinkBtn" class="btn-ghost">Kopeeri kliendilink</button>
+            <button id="clientLinkBtn" class="btn-ghost">Kopeeri liikmelink</button>
+            <button id="clientAccessBundleBtn" class="btn-ghost">Kopeeri link + parool</button>
+            <button id="resetClientPasswordBtn" class="btn-ghost">Loo uus parool</button>
             <button id="liveLinkBtn" class="btn-ghost">Kopeeri live-link</button>
           </div>
         </div>
         <div class="card">
           <h3>Mõte</h3>
-          <p>Klient muudab sisu draftis. Alles LIVE nupu vajutus kopeerib muudatused avaldatud versiooni ja teeb need päriselt live’is nähtavaks.</p>
+          <p>Admin URL jääb sulle. Liige saab ainult oma projekti lingi ja parooli. Alles LIVE nupu vajutus kopeerib muudatused avaldatud versiooni ja teeb need päriselt live’is nähtavaks.</p>
         </div>
       `;
     }
@@ -4974,22 +5061,60 @@
 
     function bindGeneratePanel() {
       const project = getProject();
-      document.querySelector("#projectSelect")?.addEventListener("change", event => {
-        setActiveProject(event.target.value);
-      });
-
-      document.querySelector("#newProjectBtn")?.addEventListener("click", () => {
-        const blueprintId = prompt("Valdkond: teenused / ehitus / restoran / ilu / kaubandus", "teenused");
-        if (!blueprintId || !BLUEPRINTS[blueprintId]) return;
-        const name = prompt("Projekti nimi", "Uus projekt");
-        if (!name) return;
-        const project = createProject(blueprintId, name.trim());
-        state.projects.unshift(project);
-        state.activeProjectId = project.id;
-        state.activePageId = project.pages[0].id;
-        state.activeSectionId = project.pages[0].sections[0].id;
+      document.querySelector("#createProjectBtn")?.addEventListener("click", () => {
+        const name = String(document.querySelector("#newProjectName")?.value || "").trim();
+        if (!name) {
+          showToast("Pane uuele projektile nimi");
+          document.querySelector("#newProjectName")?.focus();
+          return;
+        }
+        const nextProject = createProject("teenused", name);
+        nextProject.source.websiteUrl = String(document.querySelector("#newProjectWebsite")?.value || "").trim();
+        nextProject.source.facebookUrl = String(document.querySelector("#newProjectFacebook")?.value || "").trim();
+        nextProject.source.instructions = String(document.querySelector("#newProjectInstructions")?.value || "").trim();
+        nextProject.domain = getDomainFromUrl(nextProject.source.websiteUrl || nextProject.source.facebookUrl || nextProject.domain);
+        if (nextProject.source.websiteUrl || nextProject.source.facebookUrl || nextProject.source.instructions) {
+          nextProject.source.lastResult = "Projekt loodud. Vajadusel vajuta allpool \"Koonda info ja uuenda starterit\".";
+        }
+        state.projects.unshift(nextProject);
+        state.activeProjectId = nextProject.id;
+        state.activePageId = nextProject.pages[0].id;
+        state.activeSectionId = nextProject.pages[0].sections[0].id;
         render();
         saveState();
+        showToast("Uus projekt loodud");
+      });
+
+      document.querySelectorAll("[data-open-project]").forEach(node => {
+        node.addEventListener("click", () => {
+          setActiveProject(node.dataset.openProject);
+        });
+      });
+
+      document.querySelectorAll("[data-copy-member-link]").forEach(node => {
+        node.addEventListener("click", async () => {
+          const nextProject = state.projects.find(item => item.id === node.dataset.copyMemberLink);
+          const url = getClientEditorUrl(nextProject);
+          if (!url) {
+            showToast("Liikmelink vajab aktiivset parooli ja deployitud versiooni");
+            return;
+          }
+          await copyText(url);
+          showToast("Liikmelink kopeeritud");
+        });
+      });
+
+      document.querySelectorAll("[data-copy-live-link]").forEach(node => {
+        node.addEventListener("click", async () => {
+          const nextProject = state.projects.find(item => item.id === node.dataset.copyLiveLink);
+          const url = getLiveSiteUrl(nextProject);
+          if (!url) {
+            showToast("Live-link vajab deployitud versiooni");
+            return;
+          }
+          await copyText(url);
+          showToast("Live-link kopeeritud");
+        });
       });
 
       const bindValue = (selector, key) => {
@@ -5001,21 +5126,14 @@
       };
       bindValue("#sourceWebsite", "websiteUrl");
       bindValue("#sourceFacebook", "facebookUrl");
-      bindValue("#sourceIndustryHint", "industryHint");
       bindValue("#sourceInstructions", "instructions");
-
-      document.querySelectorAll("[data-blueprint]").forEach(node => {
-        node.addEventListener("click", () => {
-          applyBlueprint(node.dataset.blueprint);
-        });
-      });
 
       document.querySelector("#generateBtn")?.addEventListener("click", async () => {
         await generateStarter();
       });
 
       document.querySelector("#starterResetBtn")?.addEventListener("click", () => {
-        if (!confirm("Kas lähtestame selle projekti starteri valitud blueprinti peale?")) return;
+        if (!confirm("Kas lähtestame selle projekti starteri algseisu peale?")) return;
         resetProjectToBlueprint(project.blueprintId);
       });
     }
@@ -5208,19 +5326,44 @@
         project.clientAccess.enabled = Boolean(event.target.value.trim());
         autosave();
       });
+      document.querySelector("#clientPassword")?.addEventListener("input", event => {
+        project.clientAccess.password = event.target.value;
+        clearMemberAccess(project.id);
+        autosave();
+      });
       document.querySelector("#clientAccessEnabled")?.addEventListener("change", event => {
         project.clientAccess.enabled = Boolean(event.target.checked);
+        if (project.clientAccess.enabled && !String(project.clientAccess.password || "").trim()) {
+          project.clientAccess.password = createMemberPassword();
+        }
         autosave();
         renderPanel();
       });
       document.querySelector("#clientLinkBtn")?.addEventListener("click", async () => {
         const url = getClientEditorUrl(project);
         if (!url) {
-          showToast("Kliendilink vajab deployitud versiooni ja aktiivset ligipääsu");
+          showToast("Liikmelink vajab deployitud versiooni, aktiivset ligipääsu ja parooli");
           return;
         }
         await copyText(url);
-        showToast("Kliendilink kopeeritud");
+        showToast("Liikmelink kopeeritud");
+      });
+      document.querySelector("#clientAccessBundleBtn")?.addEventListener("click", async () => {
+        const url = getClientEditorUrl(project);
+        const password = String(project.clientAccess.password || "").trim();
+        if (!url || !password) {
+          showToast("Lisa enne liikmelink ja parool");
+          return;
+        }
+        await copyText(`Liikmelink: ${url}\nParool: ${password}`);
+        showToast("Liikme ligipääs kopeeritud");
+      });
+      document.querySelector("#resetClientPasswordBtn")?.addEventListener("click", () => {
+        project.clientAccess.password = createMemberPassword();
+        clearMemberAccess(project.id);
+        autosave();
+        renderPanel();
+        showToast("Uus parool loodud");
       });
       document.querySelector("#liveLinkBtn")?.addEventListener("click", async () => {
         const url = getLiveSiteUrl(project);
@@ -6038,6 +6181,10 @@
 
     function uniqueId(prefix) {
       return `${prefix}-${Math.random().toString(36).slice(2, 8)}`;
+    }
+
+    function createMemberPassword() {
+      return `liige-${Math.random().toString(36).slice(2, 6)}`;
     }
 
     function unique(values) {
