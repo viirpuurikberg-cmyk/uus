@@ -2406,7 +2406,8 @@
     const ROUTE_MODE = {
       clientProjectId: routeParams.get("member") || routeParams.get("client") || "",
       clientToken: routeParams.get("token") || "",
-      liveProjectId: routeParams.get("live") || ""
+      liveProjectId: routeParams.get("live") || "",
+      requestedPageId: routeParams.get("page") || ""
     };
     const CLIENT_VISIBLE_STAGES = ["content", "publish"];
     const STAGES = [
@@ -2663,7 +2664,9 @@
             unlockMemberAccess(project.id);
             document.body.classList.remove("locked");
             showAccessError("");
+            applyRouteMode();
             render();
+            saveState();
             return;
           }
           showAccessError("Vale parool");
@@ -2783,7 +2786,7 @@
         }
         document.body.classList.remove("locked");
         state.activeStage = "content";
-        state.activePageId = project.pages.find(page => page.navigation)?.id || project.pages[0]?.id || "home";
+        state.activePageId = getRoutePageId(project);
         state.activeSectionId = getFirstSectionId(getPage(project)) || "";
         appRoot.classList.add("route-client");
         return;
@@ -2802,7 +2805,7 @@
         document.body.classList.remove("locked");
         appRoot.classList.add("route-live");
         const renderableProject = getRenderableProject(project);
-        state.activePageId = renderableProject.pages.find(page => page.navigation)?.id || renderableProject.pages[0]?.id || "home";
+        state.activePageId = getRoutePageId(renderableProject);
         state.activeSectionId = getFirstSectionId(getPage(renderableProject)) || "";
       }
     }
@@ -2995,6 +2998,43 @@
         ...fallback[Math.min(index, fallback.length - 1)],
         ...item
       }));
+    }
+
+    function createCardDraft(page = getPage(), project = getProject()) {
+      if (project?.id === "ritali-ou" && page?.id === "services") {
+        return {
+          title: "Uus teenus",
+          meta: "60 minutit",
+          price: "0 €",
+          text: "Kirjuta siia uue teenuse lühikirjeldus.",
+          image: EMPTY_IMAGE
+        };
+      }
+      if (project?.id === "ritali-ou" && page?.id === "products") {
+        return {
+          title: "Uus toode",
+          meta: "Toode",
+          price: "0 €",
+          text: "Kirjuta siia uue toote kirjeldus.",
+          image: EMPTY_IMAGE
+        };
+      }
+      if (project?.id === "ritali-ou" && page?.id === "about") {
+        return {
+          title: "Uus kaart",
+          meta: "Lugu",
+          price: "",
+          text: "Kirjuta siia uue kaardi sisu.",
+          image: EMPTY_IMAGE
+        };
+      }
+      return {
+        title: "Uus kaart",
+        meta: "",
+        price: "",
+        text: "Kirjuta siia uue kaardi kirjeldus.",
+        image: EMPTY_IMAGE
+      };
     }
 
     function ensureSeedProjects(next) {
@@ -3979,6 +4019,16 @@
       return ROUTE_MODE.liveProjectId || ROUTE_MODE.clientProjectId || "";
     }
 
+    function getPrimaryPageId(project = getProject()) {
+      return project?.pages?.find(page => page.navigation)?.id || project?.pages?.[0]?.id || "home";
+    }
+
+    function getRoutePageId(project = getProject(), preferredPageId = "") {
+      const pages = project?.pages || [];
+      const candidate = preferredPageId || ROUTE_MODE.requestedPageId || (state.activeProjectId === project?.id ? state.activePageId : "") || "";
+      return candidate && pages.some(page => page.id === candidate) ? candidate : getPrimaryPageId(project);
+    }
+
     function getEditableProject(project = getProject()) {
       return project;
     }
@@ -4009,14 +4059,26 @@
       return `${window.location.origin}${window.location.pathname}`;
     }
 
-    function getClientEditorUrl(project = getProject()) {
-      if (!projectHasClientAccess(project) || !window.location.origin || window.location.protocol === "file:") return "";
-      return `${window.location.origin}${window.location.pathname}?member=${encodeURIComponent(project.id)}&token=${encodeURIComponent(project.clientAccess.inviteToken)}`;
+    function buildProjectRouteUrl(paramName, project = getProject(), paramValue = project?.id, options = {}) {
+      if (!window.location.origin || window.location.protocol === "file:" || !project || !paramValue) return "";
+      const url = new URL(`${window.location.origin}${window.location.pathname}`);
+      url.searchParams.set(paramName, paramValue);
+      const pageId = getRoutePageId(project, options.pageId);
+      if (pageId && pageId !== getPrimaryPageId(project)) {
+        url.searchParams.set("page", pageId);
+      }
+      return url.toString();
     }
 
-    function getLiveSiteUrl(project = getProject()) {
-      if (!window.location.origin || window.location.protocol === "file:") return "";
-      return `${window.location.origin}${window.location.pathname}?live=${encodeURIComponent(project.id)}`;
+    function getClientEditorUrl(project = getProject(), options = {}) {
+      if (!projectHasClientAccess(project) || !window.location.origin || window.location.protocol === "file:") return "";
+      const url = new URL(buildProjectRouteUrl("member", project, project.id, options));
+      url.searchParams.set("token", project.clientAccess.inviteToken);
+      return url.toString();
+    }
+
+    function getLiveSiteUrl(project = getProject(), options = {}) {
+      return buildProjectRouteUrl("live", project, project?.id, options);
     }
 
     function buildPublishedSnapshot(project = getProject()) {
@@ -4332,11 +4394,6 @@
       });
 
       els.backToProjectsBtn?.addEventListener("click", () => {
-        if (isClientMode() || isLiveMode()) {
-          const adminUrl = getAdminBuilderUrl();
-          if (adminUrl) window.location.href = adminUrl;
-          return;
-        }
         state.activeStage = "generate";
         renderPanel();
         renderTopbar();
@@ -4434,11 +4491,11 @@
       els.saveIndicator.textContent = isLiveMode()
         ? (project.livePublishedAt ? `Live ${formatPublishedAt(project.livePublishedAt)}` : "Live vaade")
         : state.lastSavedAt ? `Salvestatud ${state.lastSavedAt}` : "Automaatsalvestus aktiivne";
-      els.backToProjectsBtn.textContent = isClientMode() || isLiveMode() ? "Admin" : "Projektid";
+      els.backToProjectsBtn.textContent = "Projektid";
       els.previewModeBtn.textContent = state.previewMode ? "Tagasi redaktorisse" : "Eelvaade";
       els.saveBtn.textContent = isClientMode() ? "LIVE" : "Salvesta";
       els.topbarProjectSwitch?.classList.toggle("hidden", isClientMode() || isLiveMode());
-      els.backToProjectsBtn.classList.toggle("hidden", !isClientMode() && !isLiveMode() && state.activeStage === "generate");
+      els.backToProjectsBtn.classList.toggle("hidden", isClientMode() || isLiveMode() || state.activeStage === "generate");
       els.previewModeBtn.classList.toggle("hidden", isLiveMode() || isDashboardMode());
       els.trailerBtn.classList.toggle("hidden", isClientMode() || isLiveMode() || isDashboardMode());
       els.exportBtn.classList.toggle("hidden", isClientMode() || isLiveMode() || isDashboardMode());
@@ -4786,7 +4843,12 @@
             title: section.label,
             subtitle: "Kaardid ja pildid",
             open: isPanelGroupOpen(headerKey, !pendingEditorKey),
-            content: `<p class="compact-note">Muuda ainult neid kaarte, mida selles sektsioonis näidatakse.</p>`
+            content: `
+              <p class="compact-note">Muuda ainult neid kaarte, mida selles sektsioonis näidatakse.</p>
+              <div class="inline">
+                <button class="btn-ghost" type="button" data-add-card>Lisa kaart</button>
+              </div>
+            `
           })}
           ${page.content.cards.map((card, index) => {
             const cardKey = panelGroupKey(stage, page.id, section.id, `card-${index}`);
@@ -5611,6 +5673,7 @@
 
     function bindContentPanel() {
       const page = getPage();
+      const project = getProject();
       const section = getSection(page);
       bindPanelAccordions();
       els.panelBody.querySelectorAll("[data-editor-key]").forEach(input => {
@@ -5653,6 +5716,20 @@
           pendingEditorKey = key;
           applyPendingEditorFocus();
           showToast("Pilt eemaldatud");
+        });
+      });
+
+      els.panelBody.querySelectorAll("[data-add-card]").forEach(button => {
+        button.addEventListener("click", () => {
+          if (section?.type !== "cards") return;
+          page.content.cards.push(createCardDraft(page, project));
+          const nextIndex = page.content.cards.length - 1;
+          setPanelGroupOpen(panelGroupKey("content", page.id, section.id, `card-${nextIndex}`), true);
+          pendingEditorKey = `cardTitle:${nextIndex}`;
+          renderPanel();
+          renderPreview();
+          autosave();
+          showToast("Uus kaart lisatud");
         });
       });
     }
