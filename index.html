@@ -5184,7 +5184,7 @@
     function renderRitaLISite(project, page) {
       if (isRitaLIHome(project, page)) return renderRitaLIHome(project, page);
       const sectionsHtml = page.sections
-        .filter(section => section.enabled && section.type === "cards")
+        .filter(section => section.enabled && ["cards", "cta"].includes(section.type))
         .map(section => renderSection(section, page, project))
         .join("");
       return `
