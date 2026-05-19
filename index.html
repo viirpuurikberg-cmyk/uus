@@ -5202,6 +5202,10 @@
 
     function renderRitaLIHome(project, page) {
       const hero = page.content.hero;
+      const sectionsHtml = page.sections
+        .filter(section => section.enabled && ["cards", "cta"].includes(section.type))
+        .map(section => renderSection(section, page, project))
+        .join("");
       return `
         <section class="ritali-landing" data-preview-section="${page.sections[0]?.id || ""}">
           <video class="editable-image" ${editableAttrs({ key: "heroMediaUrl", kind: "image", pageId: page.id, sectionId: page.sections[0]?.id || "" })} src="${escapeAttr(hero.mediaUrl)}" autoplay muted loop playsinline poster="https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1600&q=82"></video>
@@ -5212,6 +5216,9 @@
             </button>
           </div>
         </section>
+        <main class="ritali-clean-main ritali-home-main">
+          ${sectionsHtml}
+        </main>
       `;
     }
 
