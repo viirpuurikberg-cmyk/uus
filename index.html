@@ -2963,7 +2963,22 @@
 
       normalized.pages = (project.pages || blueprint.pages.map(page => createPage(page.title, page.slug, blueprint, page.id))).map(page => normalizePage(page, blueprint));
       if (!normalized.pages.length) normalized.pages = blueprint.pages.map(page => createPage(page.title, page.slug, blueprint, page.id));
-      return normalized;
+      return applyRitaLIProjectMigrations(normalized);
+    }
+
+    function applyRitaLIProjectMigrations(project) {
+      if (project?.id !== "ritali-ou") return project;
+      const homePage = project.pages?.find(page => page.id === "home");
+      if (homePage) {
+        homePage.sections = homePage.sections.map(section => ({
+          ...section,
+          enabled: ["hero", "cards", "cta"].includes(section.type),
+          label: section.type === "cards" ? "Teenused" :
+            section.type === "gallery" ? "Salongi tunne" :
+            section.type === "trust" ? "Miks valida" : section.label
+        }));
+      }
+      return project;
     }
 
     function normalizePage(page, blueprint) {
@@ -3966,7 +3981,7 @@
       if (homePage) {
         homePage.sections = homePage.sections.map(section => ({
           ...section,
-          enabled: section.type === "hero",
+          enabled: ["hero", "cards", "cta"].includes(section.type),
           label: section.type === "cards" ? "Teenused" :
             section.type === "gallery" ? "Salongi tunne" :
             section.type === "trust" ? "Miks valida" : section.label
