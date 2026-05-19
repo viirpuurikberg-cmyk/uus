@@ -2406,8 +2406,7 @@
     const ROUTE_MODE = {
       clientProjectId: routeParams.get("member") || routeParams.get("client") || "",
       clientToken: routeParams.get("token") || "",
-      liveProjectId: routeParams.get("live") || "",
-      requestedPageId: routeParams.get("page") || ""
+      liveProjectId: routeParams.get("live") || ""
     };
     const CLIENT_VISIBLE_STAGES = ["content", "publish"];
     const STAGES = [
@@ -2664,9 +2663,7 @@
             unlockMemberAccess(project.id);
             document.body.classList.remove("locked");
             showAccessError("");
-            applyRouteMode();
             render();
-            saveState();
             return;
           }
           showAccessError("Vale parool");
@@ -2786,7 +2783,7 @@
         }
         document.body.classList.remove("locked");
         state.activeStage = "content";
-        state.activePageId = getRoutePageId(project);
+        state.activePageId = project.pages.find(page => page.navigation)?.id || project.pages[0]?.id || "home";
         state.activeSectionId = getFirstSectionId(getPage(project)) || "";
         appRoot.classList.add("route-client");
         return;
@@ -2805,7 +2802,7 @@
         document.body.classList.remove("locked");
         appRoot.classList.add("route-live");
         const renderableProject = getRenderableProject(project);
-        state.activePageId = getRoutePageId(renderableProject);
+        state.activePageId = renderableProject.pages.find(page => page.navigation)?.id || renderableProject.pages[0]?.id || "home";
         state.activeSectionId = getFirstSectionId(getPage(renderableProject)) || "";
       }
     }
@@ -2963,22 +2960,7 @@
 
       normalized.pages = (project.pages || blueprint.pages.map(page => createPage(page.title, page.slug, blueprint, page.id))).map(page => normalizePage(page, blueprint));
       if (!normalized.pages.length) normalized.pages = blueprint.pages.map(page => createPage(page.title, page.slug, blueprint, page.id));
-      return applyRitaLIProjectMigrations(normalized);
-    }
-
-    function applyRitaLIProjectMigrations(project) {
-      if (project?.id !== "ritali-ou") return project;
-      const homePage = project.pages?.find(page => page.id === "home");
-      if (homePage) {
-        homePage.sections = homePage.sections.map(section => ({
-          ...section,
-          enabled: ["hero", "cards", "cta"].includes(section.type),
-          label: section.type === "cards" ? "Teenused" :
-            section.type === "gallery" ? "Salongi tunne" :
-            section.type === "trust" ? "Miks valida" : section.label
-        }));
-      }
-      return project;
+      return normalized;
     }
 
     function normalizePage(page, blueprint) {
@@ -3013,43 +2995,6 @@
         ...fallback[Math.min(index, fallback.length - 1)],
         ...item
       }));
-    }
-
-    function createCardDraft(page = getPage(), project = getProject()) {
-      if (project?.id === "ritali-ou" && page?.id === "services") {
-        return {
-          title: "Uus teenus",
-          meta: "60 minutit",
-          price: "0 €",
-          text: "Kirjuta siia uue teenuse lühikirjeldus.",
-          image: EMPTY_IMAGE
-        };
-      }
-      if (project?.id === "ritali-ou" && page?.id === "products") {
-        return {
-          title: "Uus toode",
-          meta: "Toode",
-          price: "0 €",
-          text: "Kirjuta siia uue toote kirjeldus.",
-          image: EMPTY_IMAGE
-        };
-      }
-      if (project?.id === "ritali-ou" && page?.id === "about") {
-        return {
-          title: "Uus kaart",
-          meta: "Lugu",
-          price: "",
-          text: "Kirjuta siia uue kaardi sisu.",
-          image: EMPTY_IMAGE
-        };
-      }
-      return {
-        title: "Uus kaart",
-        meta: "",
-        price: "",
-        text: "Kirjuta siia uue kaardi kirjeldus.",
-        image: EMPTY_IMAGE
-      };
     }
 
     function ensureSeedProjects(next) {
@@ -3981,7 +3926,7 @@
       if (homePage) {
         homePage.sections = homePage.sections.map(section => ({
           ...section,
-          enabled: ["hero", "cards", "cta"].includes(section.type),
+          enabled: section.type === "hero",
           label: section.type === "cards" ? "Teenused" :
             section.type === "gallery" ? "Salongi tunne" :
             section.type === "trust" ? "Miks valida" : section.label
@@ -4034,16 +3979,6 @@
       return ROUTE_MODE.liveProjectId || ROUTE_MODE.clientProjectId || "";
     }
 
-    function getPrimaryPageId(project = getProject()) {
-      return project?.pages?.find(page => page.navigation)?.id || project?.pages?.[0]?.id || "home";
-    }
-
-    function getRoutePageId(project = getProject(), preferredPageId = "") {
-      const pages = project?.pages || [];
-      const candidate = preferredPageId || ROUTE_MODE.requestedPageId || (state.activeProjectId === project?.id ? state.activePageId : "") || "";
-      return candidate && pages.some(page => page.id === candidate) ? candidate : getPrimaryPageId(project);
-    }
-
     function getEditableProject(project = getProject()) {
       return project;
     }
@@ -4074,26 +4009,14 @@
       return `${window.location.origin}${window.location.pathname}`;
     }
 
-    function buildProjectRouteUrl(paramName, project = getProject(), paramValue = project?.id, options = {}) {
-      if (!window.location.origin || window.location.protocol === "file:" || !project || !paramValue) return "";
-      const url = new URL(`${window.location.origin}${window.location.pathname}`);
-      url.searchParams.set(paramName, paramValue);
-      const pageId = getRoutePageId(project, options.pageId);
-      if (pageId && pageId !== getPrimaryPageId(project)) {
-        url.searchParams.set("page", pageId);
-      }
-      return url.toString();
-    }
-
-    function getClientEditorUrl(project = getProject(), options = {}) {
+    function getClientEditorUrl(project = getProject()) {
       if (!projectHasClientAccess(project) || !window.location.origin || window.location.protocol === "file:") return "";
-      const url = new URL(buildProjectRouteUrl("member", project, project.id, options));
-      url.searchParams.set("token", project.clientAccess.inviteToken);
-      return url.toString();
+      return `${window.location.origin}${window.location.pathname}?member=${encodeURIComponent(project.id)}&token=${encodeURIComponent(project.clientAccess.inviteToken)}`;
     }
 
-    function getLiveSiteUrl(project = getProject(), options = {}) {
-      return buildProjectRouteUrl("live", project, project?.id, options);
+    function getLiveSiteUrl(project = getProject()) {
+      if (!window.location.origin || window.location.protocol === "file:") return "";
+      return `${window.location.origin}${window.location.pathname}?live=${encodeURIComponent(project.id)}`;
     }
 
     function buildPublishedSnapshot(project = getProject()) {
@@ -4409,6 +4332,11 @@
       });
 
       els.backToProjectsBtn?.addEventListener("click", () => {
+        if (isClientMode() || isLiveMode()) {
+          const adminUrl = getAdminBuilderUrl();
+          if (adminUrl) window.location.href = adminUrl;
+          return;
+        }
         state.activeStage = "generate";
         renderPanel();
         renderTopbar();
@@ -4506,11 +4434,11 @@
       els.saveIndicator.textContent = isLiveMode()
         ? (project.livePublishedAt ? `Live ${formatPublishedAt(project.livePublishedAt)}` : "Live vaade")
         : state.lastSavedAt ? `Salvestatud ${state.lastSavedAt}` : "Automaatsalvestus aktiivne";
-      els.backToProjectsBtn.textContent = "Projektid";
+      els.backToProjectsBtn.textContent = isClientMode() || isLiveMode() ? "Admin" : "Projektid";
       els.previewModeBtn.textContent = state.previewMode ? "Tagasi redaktorisse" : "Eelvaade";
       els.saveBtn.textContent = isClientMode() ? "LIVE" : "Salvesta";
       els.topbarProjectSwitch?.classList.toggle("hidden", isClientMode() || isLiveMode());
-      els.backToProjectsBtn.classList.toggle("hidden", isClientMode() || isLiveMode() || state.activeStage === "generate");
+      els.backToProjectsBtn.classList.toggle("hidden", !isClientMode() && !isLiveMode() && state.activeStage === "generate");
       els.previewModeBtn.classList.toggle("hidden", isLiveMode() || isDashboardMode());
       els.trailerBtn.classList.toggle("hidden", isClientMode() || isLiveMode() || isDashboardMode());
       els.exportBtn.classList.toggle("hidden", isClientMode() || isLiveMode() || isDashboardMode());
@@ -4858,12 +4786,7 @@
             title: section.label,
             subtitle: "Kaardid ja pildid",
             open: isPanelGroupOpen(headerKey, !pendingEditorKey),
-            content: `
-              <p class="compact-note">Muuda ainult neid kaarte, mida selles sektsioonis näidatakse.</p>
-              <div class="inline">
-                <button class="btn-ghost" type="button" data-add-card>Lisa kaart</button>
-              </div>
-            `
+            content: `<p class="compact-note">Muuda ainult neid kaarte, mida selles sektsioonis näidatakse.</p>`
           })}
           ${page.content.cards.map((card, index) => {
             const cardKey = panelGroupKey(stage, page.id, section.id, `card-${index}`);
@@ -5176,7 +5099,7 @@
     }
 
     function getRitaLINavPages(project) {
-      return project.pages.filter(item => ["services", "products", "about", "contact"].includes(item.id));
+      return project.pages.filter(item => ["services", "products", "about"].includes(item.id));
     }
 
     function renderRitaLIHeader(project, page, onVideo = false) {
@@ -5199,7 +5122,7 @@
     function renderRitaLISite(project, page) {
       if (isRitaLIHome(project, page)) return renderRitaLIHome(project, page);
       const sectionsHtml = page.sections
-        .filter(section => section.enabled && ["cards", "cta"].includes(section.type))
+        .filter(section => section.enabled && section.type === "cards")
         .map(section => renderSection(section, page, project))
         .join("");
       return `
@@ -5217,10 +5140,6 @@
 
     function renderRitaLIHome(project, page) {
       const hero = page.content.hero;
-      const sectionsHtml = page.sections
-        .filter(section => section.enabled && ["cards", "cta"].includes(section.type))
-        .map(section => renderSection(section, page, project))
-        .join("");
       return `
         <section class="ritali-landing" data-preview-section="${page.sections[0]?.id || ""}">
           <video class="editable-image" ${editableAttrs({ key: "heroMediaUrl", kind: "image", pageId: page.id, sectionId: page.sections[0]?.id || "" })} src="${escapeAttr(hero.mediaUrl)}" autoplay muted loop playsinline poster="https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1600&q=82"></video>
@@ -5231,9 +5150,6 @@
             </button>
           </div>
         </section>
-        <main class="ritali-clean-main ritali-home-main">
-          ${sectionsHtml}
-        </main>
       `;
     }
 
@@ -5695,7 +5611,6 @@
 
     function bindContentPanel() {
       const page = getPage();
-      const project = getProject();
       const section = getSection(page);
       bindPanelAccordions();
       els.panelBody.querySelectorAll("[data-editor-key]").forEach(input => {
@@ -5738,20 +5653,6 @@
           pendingEditorKey = key;
           applyPendingEditorFocus();
           showToast("Pilt eemaldatud");
-        });
-      });
-
-      els.panelBody.querySelectorAll("[data-add-card]").forEach(button => {
-        button.addEventListener("click", () => {
-          if (section?.type !== "cards") return;
-          page.content.cards.push(createCardDraft(page, project));
-          const nextIndex = page.content.cards.length - 1;
-          setPanelGroupOpen(panelGroupKey("content", page.id, section.id, `card-${nextIndex}`), true);
-          pendingEditorKey = `cardTitle:${nextIndex}`;
-          renderPanel();
-          renderPreview();
-          autosave();
-          showToast("Uus kaart lisatud");
         });
       });
     }
